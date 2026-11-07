@@ -814,7 +814,7 @@ export const DashboardPage = ({
         {!isFullPageMaps && !isChatMode && !isScheduleMode && (
           <DashboardTopbar
             userName={profileUser.fullName.split(' ')[0] || 'Andreas'}
-            subtitle="Let's look at your daily accommodation overview."
+            subtitle="Pantau ringkasan hunian harian dan jadwal survei Anda."
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onOpenMobileMenu={() => setMobileMenuOpen(true)}

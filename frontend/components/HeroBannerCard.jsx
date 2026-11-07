@@ -13,7 +13,7 @@ export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
         <source srcSet="/dashboard-hero.webp" type="image/webp" />
         <img
           src="/dashboard-hero.jpg"
-          alt="Student discovering ideal kos room with Teralio Voice AI"
+          alt="Mahasiswa menemukan kos impian bersama Asisten AI Teralio"
           className="hero-bento-card__bg-img"
           loading="eager"
           decoding="async"
@@ -23,9 +23,9 @@ export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
 
       <div>
         <h2 className="hero-bento-card__headline">
-          Your Ideal Kos Match
+          Temukan Kos Impianmu
           <br />
-          Starts Here!
+          Dimulai di Sini!
         </h2>
       </div>
 
@@ -40,12 +40,12 @@ export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
             <polygon points="8 5 19 12 8 19 8 5" />
           </svg>
         </span>
-        <span className="hero-play-label">Explore Now</span>
+        <span className="hero-play-label">Eksplorasi Sekarang</span>
       </button>
 
       <div className="hero-bento-card__footer">
         <div>
-          <p className="hero-members-caption">Join discovery with:</p>
+          <p className="hero-members-caption">Bergabung bersama:</p>
           <div className="hero-members-row">
             <div className="avatar-stack" aria-hidden="true">
               {MEMBER_AVATARS.map((src, idx) => (
@@ -59,7 +59,7 @@ export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
             </div>
             <div className="hero-members-stat">
               <strong>5.8K+</strong>
-              <span>Students</span>
+              <span>Mahasiswa</span>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@ export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
           onClick={onStartSession}
           data-testid="hero-start-btn"
         >
-          <span>Start AI Session</span>
+          <span>Mulai Sesi AI</span>
           <span className="btn-hero-cta__circle" aria-hidden="true">
             <svg
               width="16"

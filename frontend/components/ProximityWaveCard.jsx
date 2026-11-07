@@ -22,7 +22,7 @@ export const ProximityWaveCard = ({ onOpenMaps }) => {
                 <line x1="3" y1="12" x2="21" y2="12" />
               </svg>
             </span>
-            <h3 className="metric-card__heading">Campus Walk</h3>
+            <h3 className="metric-card__heading">Jarak Kampus</h3>
           </div>
 
           <div className="metric-card__cap">
@@ -31,8 +31,8 @@ export const ProximityWaveCard = ({ onOpenMaps }) => {
         </div>
 
         <div className="metric-card__subrow">
-          <span>Ideal walk range is 300m - 950m</span>
-          <span>Fiber Wi-Fi</span>
+          <span>Jangkauan ideal 300m - 950m</span>
+          <span>Wi-Fi Cepat</span>
         </div>
       </div>
 
@@ -96,10 +96,10 @@ export const ProximityWaveCard = ({ onOpenMaps }) => {
         </div>
 
         <div className="proximity-status-note">
-          Of the campus
+          Radius kampus
           <br />
-          radius matched
-          <strong>Keep it up!</strong>
+          terjangkau
+          <strong>Sangat Strategis!</strong>
           {onOpenMaps && (
             <button
               type="button"

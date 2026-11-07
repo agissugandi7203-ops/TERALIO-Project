@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 
 const PERIOD_METRICS = {
-  D: { value: '14 Kos', unit: '/Day', filledDefault: 7 },
-  W: { value: '42 Kos', unit: '/Week', filledDefault: 11 },
-  M: { value: '96%', unit: '/Match', filledDefault: 13 },
+  D: { value: '14 Kos', unit: '/Hari', filledDefault: 7 },
+  W: { value: '42 Kos', unit: '/Minggu', filledDefault: 11 },
+  M: { value: '96%', unit: '/Kecocokan', filledDefault: 13 },
 };
 
 const CRITERIA_LABELS = [
-  'Campus Location',
-  'Max Budget',
-  'Private Bathroom',
-  'High-Speed Wi-Fi',
-  'Quiet Study Env',
-  'Furnished Room',
-  'Air Conditioning',
-  '24/7 Access',
-  'Laundry Nearby',
-  'Parking Space',
-  'Power Included',
-  'Shared Kitchen',
-  'Verified Host',
-  'CCTV Security',
-  'Transit Proximity',
+  'Lokasi Kampus',
+  'Maksimal Budget',
+  'Kamar Mandi Dalam',
+  'Wi-Fi Cepat',
+  'Suasana Tenang Nugas',
+  'Kamar Berperabot (Furnished)',
+  'Pendingin Ruangan (AC)',
+  'Akses Bebas 24 Jam',
+  'Dekat Laundry',
+  'Parkir Luas',
+  'Termasuk Listrik',
+  'Dapur Bersama',
+  'Pemilik Terverifikasi',
+  'Keamanan CCTV',
+  'Dekat Transportasi',
 ];
 
 export const MatchStatusCard = () => {
@@ -39,13 +39,13 @@ export const MatchStatusCard = () => {
     <section className="status-bento-card" data-testid="match-status-card">
       <div className="status-bento-card__top">
         <div>
-          <h3 className="status-bento-card__title">Preference Status</h3>
+          <h3 className="status-bento-card__title">Status Preferensi</h3>
           <p className="status-bento-card__desc">
-            Drive your ideal kos criteria daily. Build smart filters and achieve
-            your best match.
+            Pantau kecocokan kriteria kos harian Anda. Filter cerdas untuk
+            menemukan hunian paling ideal.
           </p>
           <span className="lime-well-done-pill">
-            <span>Well Matched</span>
+            <span>Sangat Cocok</span>
           </span>
         </div>
 

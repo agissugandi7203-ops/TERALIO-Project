@@ -2,7 +2,7 @@ import React from 'react';
 
 export const DashboardTopbar = ({
   userName = 'Andreas',
-  subtitle = "Let's look at your daily accommodation overview.",
+  subtitle = 'Pantau ringkasan hunian harian dan jadwal survei Anda.',
   searchQuery = '',
   onSearchChange,
   onSearchSubmit,
@@ -69,7 +69,7 @@ export const DashboardTopbar = ({
             value={searchQuery}
             onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search for kos, campus, or metrics"
+            placeholder="Cari kos, kampus, atau kriteria budget..."
             data-testid="dashboard-search-input"
           />
         </label>
