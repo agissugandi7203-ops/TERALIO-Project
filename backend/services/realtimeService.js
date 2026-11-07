@@ -50,10 +50,6 @@ const extractCallIdFromLocation = (locationHeader) => {
 /**
  * Membangun objek konfigurasi sesi Realtime GA (`RealtimeSessionCreateRequest`) yang tervalidasi.
  */
-// Kosakata domain untuk meningkatkan akurasi transkripsi suara pengguna (bahasa Indonesia)
-const TRANSCRIPTION_VOCAB_PROMPT =
-  'Percakapan bahasa Indonesia tentang mencari kos dan kontrakan mahasiswa. Kosakata: kos, kost, kos putra, kos putri, kos campur, kontrakan, Teralio, Telkom University, Tel-U, ITB, UTB, UI Depok, UGM, Bandung, Sukapura, Sukabirus, PGA, Bojongsoang, Dayeuhkolot, Dago, Cisitu, Soekarno-Hatta, kamar mandi dalam, Wi-Fi, AC, budget, juta, ribu, per bulan, jalan kaki, survei, jadwal, besok, jam.';
-
 export async function buildRealtimeSessionConfig({
   model = config.openai.realtimeModel,
   voice = config.openai.realtimeVoice,
@@ -147,7 +143,6 @@ export async function buildRealtimeSessionConfig({
               transcription: {
                 model: transcriptionModel,
                 ...(transcriptionLanguage ? { language: transcriptionLanguage } : {}),
-                prompt: TRANSCRIPTION_VOCAB_PROMPT,
               },
             }
           : {}),

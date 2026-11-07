@@ -75,23 +75,10 @@ export class RealtimeVoiceClient {
     this.isConnected = false;
     this.isAiSpeaking = false;
     this.disposed = false;
-    // AI TIDAK PERNAH menyapa duluan: pengguna wajib berbicara lebih dulu
-    this.shouldAutoGreet = false;
+    this.shouldAutoGreet = true;
     this.hasSentInitialGreeting = false;
     this.isGreetingPhase = false;
     this.greetingMuteTimeout = null;
-
-    // Barge-in (Interupsi Suara): Mikrofon tetap aktif dua arah dengan WebRTC Echo Cancellation.
-    // Saat pengguna mulai bicara di tengah giliran AI, AI langsung berhenti berbicara dan mendengarkan.
-    this.audioStartedThisTurn = false;
-    this.responseDoneThisTurn = false;
-    this.asstPacer = null;
-    this.asstPacerTimer = null;
-
-    // Transkripsi lokal instan berbasis Web Speech API (speech-to-text di browser)
-    this.localSpeechRec = null;
-    this.latestLocalTranscript = '';
-    this.lastServerUserTranscript = '';
   }
 
   emitState(statePatch) {
@@ -99,130 +86,31 @@ export class RealtimeVoiceClient {
     this.onStateChange?.(statePatch);
   }
 
-  applyMicState() {
-    if (!this.localStream) return;
-    const enabled = !this.disposed && !this.isMuted;
-    for (const track of this.localStream.getAudioTracks()) {
-      track.enabled = enabled;
-    }
-  }
-
-  // Menghentikan audio AI seketika saat pengguna melakukan interupsi (barge-in)
-  interruptPlaybackOnly() {
-    this.isAiSpeaking = false;
-    if (this.audioEl) {
-      try {
-        this.audioEl.pause?.();
-        this.audioEl.currentTime = 0;
-      } catch {
-        // ignore
-      }
-    }
-    this.sendClientEvent({ type: 'output_audio_buffer.clear' });
-    this.sendClientEvent({ type: 'response.cancel' });
-    this.flushAssistantTranscript();
-  }
-
-  // Menjalankan Web Speech API lokal di browser untuk auto voice-to-text instan & barge-in detection
-  startLocalSpeechRecognition() {
-    if (typeof window === 'undefined') return;
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) return;
-
-    this.stopLocalSpeechRecognition();
-
-    try {
-      const rec = new SpeechRec();
-      rec.lang = 'id-ID';
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.maxAlternatives = 1;
-
-      rec.onspeechstart = () => {
-        if (this.disposed || this.isMuted) return;
-        if (this.isAiSpeaking) {
-          this.interruptPlaybackOnly();
-        }
-        this.emitState({
-          phase: 'user_speaking',
-          orbState: 'idle',
-          variant: 'default',
-          speed: 1.35,
-          paused: false,
-          label: 'Mendengarkan ucapan Anda...',
-        });
-      };
-
-      rec.onresult = (event) => {
-        if (this.disposed || this.isMuted) return;
-        if (this.isAiSpeaking) {
-          this.interruptPlaybackOnly();
-        }
-
-        let interim = '';
-        let finalChunk = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const res = event.results[i];
-          const t = res[0]?.transcript || '';
-          if (res.isFinal) {
-            finalChunk += t;
-          } else {
-            interim += t;
-          }
-        }
-
-        const liveText = (finalChunk || interim).trim();
-        if (liveText) {
-          this.latestLocalTranscript = liveText;
-          // Kirim teks transkripsi lokal ke UI seketika agar pengguna melihat apa yang diucapkannya
-          this.onTranscript?.({
-            role: 'user',
-            itemId: 'user_live_speech',
-            text: liveText,
-            final: false,
-          });
-        }
-      };
-
-      rec.onerror = () => {
-        // Event error seperti 'no-speech' atau 'aborted' wajar terjadi pada Web Speech API
-      };
-
-      rec.onend = () => {
-        if (!this.disposed && this.isConnected && !this.isMuted) {
-          try {
-            rec.start();
-          } catch {
-            // abaikan jika sudah aktif
-          }
-        }
-      };
-
-      rec.start();
-      this.localSpeechRec = rec;
-    } catch {
-      // Browser tidak mendukung Web Speech API atau izin dibatasi
-    }
-  }
-
-  stopLocalSpeechRecognition() {
-    if (this.localSpeechRec) {
-      try {
-        this.localSpeechRec.abort?.();
-      } catch {
-        try {
-          this.localSpeechRec.stop?.();
-        } catch {
-          // ignore
-        }
-      }
-      this.localSpeechRec = null;
-    }
-  }
-
-  // Dipertahankan untuk kompatibilitas: sapaan otomatis dinonaktifkan permanen.
   triggerInitialGreetingIfNeeded() {
-    return;
+    if (this.disposed || !this.shouldAutoGreet || this.hasSentInitialGreeting) return;
+    if (!this.dc || this.dc.readyState !== 'open') return;
+    this.hasSentInitialGreeting = true;
+    this.isGreetingPhase = true;
+
+    // Sesuai panduan resmi OpenAI WebRTC: jalankan audio secara full-duplex tanpa mematikan
+    // track mikrofon hardware (JANGAN panggil track.enabled = false di sini agar browser mobile
+    // tidak membuka-tutup status mic hardware dan tidak memicu suara chime notifikasi OS "tununut").
+    // Server VAD OpenAI dan WebRTC echo cancellation secara native menyaring suara speaker.
+
+    if (this.greetingMuteTimeout) {
+      clearTimeout(this.greetingMuteTimeout);
+    }
+    this.greetingMuteTimeout = setTimeout(() => {
+      this.finishGreetingPhase();
+    }, 3500);
+
+    this.sendClientEvent({
+      type: 'response.create',
+      response: {
+        instructions:
+          'Sapa pengguna secara sangat singkat dan cepat persis seperti ini: "Halo! Ada yang bisa saya bantu?" Cukup satu kalimat itu saja. JANGAN sebutkan kos dulu, JANGAN panggil tool apapun, dan biarkan kamera peta tetap diam.',
+      },
+    });
   }
 
   finishGreetingPhase() {
@@ -231,7 +119,6 @@ export class RealtimeVoiceClient {
       this.greetingMuteTimeout = null;
     }
     this.isGreetingPhase = false;
-    this.applyMicState();
   }
 
   async connect({ userContext, reasoningEffort = 'low', voice, autoGreet = true } = {}) {
@@ -253,12 +140,8 @@ export class RealtimeVoiceClient {
     activeGlobalVoiceClient = this;
 
     this.disposed = false;
-    // Abaikan opsi autoGreet: pengguna SELALU berbicara lebih dulu
-    void autoGreet;
-    this.shouldAutoGreet = false;
+    this.shouldAutoGreet = autoGreet !== false;
     this.hasSentInitialGreeting = false;
-    this.audioStartedThisTurn = false;
-    this.responseDoneThisTurn = false;
 
     if (
       typeof navigator === 'undefined' ||
@@ -293,25 +176,33 @@ export class RealtimeVoiceClient {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          channelCount: 1,
         },
       });
       if (this.disposed) {
         this.cleanupResources();
         return;
       }
-    } catch (micErr) {
-      const denied =
-        micErr?.name === 'NotAllowedError' || micErr?.name === 'PermissionDeniedError';
-      const err = new Error(
-        denied
-          ? 'Izin mikrofon ditolak. Aktifkan akses mikrofon pada browser untuk memulai percakapan suara.'
-          : 'Mikrofon tidak terdeteksi atau sedang digunakan aplikasi lain.',
-      );
-      err.code = denied ? 'MIC_PERMISSION_DENIED' : 'MIC_UNAVAILABLE';
-      this.cleanupResources();
-      this.onError?.(err);
-      throw err;
+    } catch (primaryErr) {
+      // Fallback ramah mobile untuk perangkat yang menolak constraint audio spesifik
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (this.disposed) {
+          this.cleanupResources();
+          return;
+        }
+      } catch (micErr) {
+        const denied =
+          micErr?.name === 'NotAllowedError' || micErr?.name === 'PermissionDeniedError';
+        const err = new Error(
+          denied
+            ? 'Izin mikrofon ditolak. Aktifkan akses mikrofon pada browser untuk memulai percakapan suara.'
+            : 'Mikrofon tidak terdeteksi atau sedang digunakan aplikasi lain.',
+        );
+        err.code = denied ? 'MIC_PERMISSION_DENIED' : 'MIC_UNAVAILABLE';
+        this.cleanupResources();
+        this.onError?.(err);
+        throw err;
+      }
     }
 
     this.emitState({
@@ -325,16 +216,15 @@ export class RealtimeVoiceClient {
 
     try {
       // 1. Minta ephemeral client secret dari backend (tanpa mengekspos OPENAI_API_KEY)
-      // server_vad optimal untuk Barge-In (Interupsi Suara): threshold 0.58, jeda 800ms, prefix 400ms,
-      // dengan echoCancellation aktif sehingga suara pengguna langsung memotong suara AI saat bicara.
+      // Gunakan server_vad dengan threshold 0.78, silence_duration 1200ms & near_field agar tidak mudah terpotong bising sekitar atau pantulan speaker
       const tokenRes = await fetch('/api/realtime/client-secrets', {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           turnDetection: 'server_vad',
-          vadThreshold: 0.58,
-          vadSilenceDurationMs: 800,
-          vadPrefixPaddingMs: 400,
+          vadThreshold: 0.78,
+          vadSilenceDurationMs: 1200,
+          vadPrefixPaddingMs: 300,
           noiseReduction: 'near_field',
           reasoningEffort: reasoningEffort === 'high' ? 'high' : 'low',
           enableTools: true,
@@ -373,20 +263,43 @@ export class RealtimeVoiceClient {
       const pc = new RTCPeerConnection();
       this.pc = pc;
 
-      const audioEl = document.createElement('audio');
-      audioEl.autoplay = true;
-      audioEl.playsInline = true;
+      // Pastikan elemen audio terdaftar di DOM agar pemutaran suara diizinkan oleh kebijakan mobile browser (iOS Safari & Android Chrome)
+      let audioEl = null;
+      if (typeof document !== 'undefined') {
+        audioEl = document.getElementById('teralio-webrtc-audio-output');
+        if (!audioEl) {
+          audioEl = document.createElement('audio');
+          audioEl.id = 'teralio-webrtc-audio-output';
+          audioEl.autoplay = true;
+          audioEl.playsInline = true;
+          audioEl.setAttribute('playsinline', '');
+          audioEl.setAttribute('webkit-playsinline', '');
+          audioEl.style.position = 'fixed';
+          audioEl.style.top = '-9999px';
+          audioEl.style.left = '-9999px';
+          audioEl.style.width = '1px';
+          audioEl.style.height = '1px';
+          audioEl.style.opacity = '0.01';
+          audioEl.style.pointerEvents = 'none';
+          document.body.appendChild(audioEl);
+        } else {
+          audioEl.autoplay = true;
+          audioEl.playsInline = true;
+        }
+      }
       this.audioEl = audioEl;
 
       this.setupAudioMetering(this.localStream, null);
 
       pc.ontrack = (event) => {
         if (this.disposed) return;
-        const [remoteStream] = event.streams;
+        const remoteStream = event.streams?.[0] || new MediaStream([event.track]);
         if (remoteStream) {
           this.remoteStream = remoteStream;
-          audioEl.srcObject = remoteStream;
-          audioEl.play?.().catch(() => {});
+          if (this.audioEl) {
+            this.audioEl.srcObject = remoteStream;
+            this.audioEl.play?.().catch(() => {});
+          }
           this.attachRemoteAnalyser(remoteStream);
         }
       };
@@ -430,6 +343,33 @@ export class RealtimeVoiceClient {
         return;
       }
 
+      // Sesuai panduan resmi OpenAI WebRTC: tunggu pengumpulan ICE candidates selesai
+      // agar koneksi WebRTC di jaringan mobile (4G/5G/NAT) stabil dan tidak putus-nyambung
+      if (typeof pc.iceGatheringState !== 'undefined') {
+        await new Promise((resolve) => {
+          if (pc.iceGatheringState === 'complete') {
+            resolve();
+          } else {
+            const timeout = setTimeout(() => resolve(), 1200);
+            const onIceChange = () => {
+              if (pc.iceGatheringState === 'complete') {
+                clearTimeout(timeout);
+                pc.removeEventListener?.('icegatheringstatechange', onIceChange);
+                resolve();
+              }
+            };
+            pc.addEventListener?.('icegatheringstatechange', onIceChange);
+          }
+        });
+      }
+
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
+
+      const localSdp = pc.localDescription?.sdp || offer.sdp;
+
       this.emitState({
         phase: 'connecting',
         orbState: 'waiting',
@@ -446,7 +386,7 @@ export class RealtimeVoiceClient {
           Authorization: `Bearer ${ephemeralKey}`,
           'Content-Type': 'application/sdp',
         },
-        body: offer.sdp,
+        body: localSdp,
       });
       if (this.disposed) {
         this.cleanupResources();
@@ -500,7 +440,6 @@ export class RealtimeVoiceClient {
       }
 
       this.isConnected = true;
-      this.startLocalSpeechRecognition();
       this.emitState({
         phase: 'listening',
         orbState: 'idle',
@@ -524,6 +463,11 @@ export class RealtimeVoiceClient {
     try {
       const ctx = new AudioCtx();
       this.audioCtx = ctx;
+
+      // Resume AudioContext jika dalam status suspended (kebijakan autoplay mobile)
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
 
       if (localStream) {
         const micSource = ctx.createMediaStreamSource(localStream);
@@ -576,8 +520,9 @@ export class RealtimeVoiceClient {
         variant: 'blink',
         speed: 1.05,
         paused: false,
-        label: 'Silakan mulai berbicara...',
+        label: 'Menyapa Anda...',
       });
+      this.triggerInitialGreetingIfNeeded();
     };
 
     dc.onmessage = (msgEvent) => {
@@ -606,6 +551,7 @@ export class RealtimeVoiceClient {
     switch (event.type) {
       case 'session.created':
       case 'session.updated':
+        this.triggerInitialGreetingIfNeeded();
         if (!this.isAiSpeaking) {
           this.emitState({
             phase: 'listening',
@@ -619,9 +565,11 @@ export class RealtimeVoiceClient {
         break;
 
       case 'input_audio_buffer.speech_started':
-        if (this.isAiSpeaking) {
-          this.interruptPlaybackOnly();
+        if (this.isGreetingPhase) {
+          // Abaikan deteksi suara selama fase awal sapaan agar AI tidak terinterupsi oleh pantulan speakernya sendiri
+          break;
         }
+        this.isAiSpeaking = false;
         this.emitState({
           phase: 'user_speaking',
           orbState: 'idle',
@@ -657,8 +605,6 @@ export class RealtimeVoiceClient {
 
       case 'conversation.item.input_audio_transcription.completed':
         if (event.transcript && event.transcript.trim()) {
-          this.lastServerUserTranscript = event.transcript.trim();
-          this.latestLocalTranscript = '';
           this.onTranscript?.({
             role: 'user',
             itemId: event.item_id || `user_${Date.now()}`,
@@ -669,25 +615,16 @@ export class RealtimeVoiceClient {
         break;
 
       case 'response.created':
-        // Jika transkripsi server belum tiba saat giliran AI dimulai, fallback ke transkrip lokal browser
-        if (this.latestLocalTranscript && !this.lastServerUserTranscript) {
-          this.onTranscript?.({
-            role: 'user',
-            itemId: `user_local_${Date.now()}`,
-            text: this.latestLocalTranscript,
-            final: true,
+        if (!this.isAiSpeaking) {
+          this.emitState({
+            phase: 'ai_thinking',
+            orbState: 'reasoning',
+            variant: 'twins',
+            speed: 1.2,
+            paused: false,
+            label: 'Menyiapkan respons...',
           });
-          this.latestLocalTranscript = '';
         }
-        this.lastServerUserTranscript = '';
-        this.emitState({
-          phase: 'ai_thinking',
-          orbState: 'reasoning',
-          variant: 'twins',
-          speed: 1.2,
-          paused: false,
-          label: 'Menyiapkan respons...',
-        });
         break;
 
       case 'response.mcp_call.in_progress':
@@ -718,16 +655,6 @@ export class RealtimeVoiceClient {
 
       case 'output_audio_buffer.started':
         this.isAiSpeaking = true;
-        this.audioStartedThisTurn = true;
-        // Pastikan elemen audio selalu memutar (tidak tertahan pause dari interupsi sebelumnya)
-        if (this.audioEl) {
-          try {
-            this.audioEl.play?.().catch(() => {});
-          } catch {
-            // ignore
-          }
-        }
-        this.startTranscriptPacer();
         this.emitState({
           phase: 'ai_speaking',
           orbState: 'working',
@@ -740,39 +667,64 @@ export class RealtimeVoiceClient {
 
       case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
+        if (!this.isAiSpeaking) {
+          this.isAiSpeaking = true;
+          this.emitState({
+            phase: 'ai_speaking',
+            orbState: 'working',
+            variant: 'default',
+            speed: 1.25,
+            paused: false,
+            label: 'Teralio sedang berbicara...',
+          });
+        }
         if (event.delta) {
-          // Teks AI ditahan & dirilis mengikuti tempo suara agar teks tidak mendahului audio
-          this.queueAssistantDelta(event.item_id || event.response_id || 'assistant_live', event.delta);
+          this.onTranscript?.({
+            role: 'assistant',
+            itemId: event.item_id || event.response_id || 'assistant_live',
+            delta: event.delta,
+            final: false,
+          });
         }
         break;
 
       case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done':
         if (event.transcript && event.transcript.trim()) {
-          this.setAssistantFinal(
-            event.item_id || event.response_id || `assistant_${Date.now()}`,
-            event.transcript.trim(),
-          );
+          this.onTranscript?.({
+            role: 'assistant',
+            itemId: event.item_id || event.response_id || `assistant_${Date.now()}`,
+            text: event.transcript.trim(),
+            final: true,
+          });
         }
         break;
-
-      case 'response.done': {
-        this.responseDoneThisTurn = true;
-        const status = event.response?.status;
-        if (!this.audioStartedThisTurn || status === 'cancelled' || status === 'failed') {
-          this.flushAssistantTranscript();
-        }
-        break;
-      }
 
       case 'output_audio_buffer.stopped':
+      case 'response.done':
+        this.finishGreetingPhase();
         this.isAiSpeaking = false;
-        this.flushAssistantTranscript();
+        this.emitState({
+          phase: 'listening',
+          orbState: 'idle',
+          variant: 'blink',
+          speed: 1.05,
+          paused: false,
+          label: this.isMuted ? 'Mikrofon dibisukan' : 'Mendengarkan Anda...',
+        });
         break;
 
       case 'output_audio_buffer.cleared':
+        this.finishGreetingPhase();
         this.isAiSpeaking = false;
-        this.flushAssistantTranscript();
+        if (this.audioEl) {
+          try {
+            this.audioEl.pause?.();
+            this.audioEl.currentTime = 0;
+          } catch {
+            // ignore
+          }
+        }
         this.emitState({
           phase: 'interrupted',
           orbState: 'idle',
@@ -785,93 +737,18 @@ export class RealtimeVoiceClient {
 
       case 'error': {
         const msg = event.error?.message || 'Terjadi kendala pada sesi suara Realtime.';
-        const code = event.error?.code || '';
-        // Abaikan error non-fatal yang wajar terjadi pada percakapan real-time
-        if (
-          /cancellation failed|no active response|already has an active response|buffer too small|input audio buffer/i.test(
-            msg,
-          ) ||
-          /conversation_already_has_active_response|input_audio_buffer_commit_empty|response_cancel_not_active/i.test(
-            code,
-          )
-        ) {
+        // Abaikan warning cancel ketika user sengaja melakukan interrupt
+        if (/cancellation failed|no active response/i.test(msg)) {
           break;
         }
         const err = new Error(msg);
-        err.code = code || 'REALTIME_SERVER_ERROR';
+        err.code = event.error?.code || 'REALTIME_SERVER_ERROR';
         this.onError?.(err);
         break;
       }
 
       default:
         break;
-    }
-  }
-
-  // ---------- Sinkronisasi teks AI dengan tempo suara ----------
-  queueAssistantDelta(itemId, delta) {
-    if (!this.asstPacer || this.asstPacer.itemId !== itemId) {
-      this.flushAssistantTranscript();
-      this.asstPacer = { itemId, pending: '', emitted: '', finalText: null };
-    }
-    this.asstPacer.pending += delta;
-    if (this.audioStartedThisTurn) this.startTranscriptPacer();
-  }
-
-  setAssistantFinal(itemId, text) {
-    if (!this.asstPacer || this.asstPacer.itemId !== itemId) {
-      this.flushAssistantTranscript();
-      this.asstPacer = { itemId, pending: '', emitted: '', finalText: null };
-    }
-    this.asstPacer.finalText = text;
-    // Bila audio sudah selesai/tidak ada audio, langsung tampilkan final
-    if (!this.isAiSpeaking || (!this.audioStartedThisTurn && this.responseDoneThisTurn)) {
-      this.flushAssistantTranscript();
-    }
-  }
-
-  startTranscriptPacer() {
-    if (this.asstPacerTimer) return;
-    const TICK_MS = 80;
-    const CHARS_PER_SEC = 15; // perkiraan tempo bicara TTS bahasa Indonesia
-    this.asstPacerTimer = setInterval(() => {
-      const p = this.asstPacer;
-      if (this.disposed || !p) {
-        this.stopTranscriptPacer();
-        return;
-      }
-      if (!p.pending) return;
-      let take = Math.max(1, Math.round((CHARS_PER_SEC * TICK_MS) / 1000));
-      // Rilis hingga akhir kata agar tidak memotong kata di tengah
-      const nextSpace = p.pending.indexOf(' ', take);
-      if (nextSpace !== -1 && nextSpace - take < 12) take = nextSpace + 1;
-      const chunk = p.pending.slice(0, take);
-      p.pending = p.pending.slice(take);
-      p.emitted += chunk;
-      this.onTranscript?.({ role: 'assistant', itemId: p.itemId, delta: chunk, final: false });
-    }, TICK_MS);
-  }
-
-  stopTranscriptPacer() {
-    if (this.asstPacerTimer) {
-      clearInterval(this.asstPacerTimer);
-      this.asstPacerTimer = null;
-    }
-  }
-
-  flushAssistantTranscript() {
-    this.stopTranscriptPacer();
-    const p = this.asstPacer;
-    this.asstPacer = null;
-    if (!p) return;
-    if (p.pending) {
-      this.onTranscript?.({ role: 'assistant', itemId: p.itemId, delta: p.pending, final: false });
-      p.emitted += p.pending;
-      p.pending = '';
-    }
-    const finalText = (p.finalText || p.emitted || '').trim();
-    if (finalText) {
-      this.onTranscript?.({ role: 'assistant', itemId: p.itemId, text: finalText, final: true });
     }
   }
 
@@ -935,11 +812,10 @@ export class RealtimeVoiceClient {
 
   setMuted(muted) {
     this.isMuted = Boolean(muted);
-    this.applyMicState();
-    if (this.isMuted) {
-      this.stopLocalSpeechRecognition();
-    } else if (this.isConnected) {
-      this.startLocalSpeechRecognition();
+    if (this.localStream) {
+      for (const track of this.localStream.getAudioTracks()) {
+        track.enabled = !this.isMuted;
+      }
     }
     if (this.isConnected && !this.isAiSpeaking) {
       this.emitState({
@@ -954,7 +830,9 @@ export class RealtimeVoiceClient {
   }
 
   interrupt() {
-    this.interruptPlaybackOnly();
+    this.sendClientEvent({ type: 'response.cancel' });
+    this.sendClientEvent({ type: 'output_audio_buffer.clear' });
+    this.isAiSpeaking = false;
     this.emitState({
       phase: 'interrupted',
       orbState: 'idle',
@@ -966,15 +844,9 @@ export class RealtimeVoiceClient {
   }
 
   cleanupResources() {
-    this.flushAssistantTranscript();
     this.disposed = true;
     this.isConnected = false;
     this.isAiSpeaking = false;
-    this.stopLocalSpeechRecognition();
-    this.latestLocalTranscript = '';
-    this.lastServerUserTranscript = '';
-    this.stopTranscriptPacer();
-    this.asstPacer = null;
     if (this.greetingMuteTimeout) {
       clearTimeout(this.greetingMuteTimeout);
       this.greetingMuteTimeout = null;
@@ -1033,13 +905,6 @@ export class RealtimeVoiceClient {
       try {
         this.audioEl.pause?.();
         this.audioEl.srcObject = null;
-        if (
-          typeof this.audioEl.load === 'function' &&
-          typeof window !== 'undefined' &&
-          !window.navigator?.userAgent?.includes('jsdom')
-        ) {
-          this.audioEl.load();
-        }
       } catch {
         // ignore
       }

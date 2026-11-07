@@ -210,9 +210,6 @@ export function SmartKosAiSidebar({
               latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'user', text: ev.text });
             } else if (ev.delta) {
               setLiveTranscript((prev) => `${prev}${ev.delta}`);
-            } else if (ev.text) {
-              // Menampilkan transkripsi suara lokal secara real-time langsung saat pengguna berbicara
-              setLiveTranscript(ev.text);
             }
           } else if (ev.role === 'assistant' && ev.final && ev.text) {
             latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'assistant', text: ev.text });
@@ -270,10 +267,10 @@ export function SmartKosAiSidebar({
         realtimeClientRef.current = null;
         setIsConnectingVoice(false);
         setIsListeningMic(false);
-        if (webrtcErr?.code === 'MIC_PERMISSION_DENIED') {
-          setVoiceError(webrtcErr.message);
-          return;
-        }
+        setVoiceError(
+          webrtcErr?.message || 'Gagal memulai koneksi suara WebRTC. Silakan coba kembali.',
+        );
+        return;
       }
     }
 
