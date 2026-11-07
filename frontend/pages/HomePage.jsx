@@ -1,158 +1,258 @@
 import React, { useState, useEffect } from 'react';
-import SupabaseStatus from '../components/SupabaseStatus.jsx';
-import OpenAiCard from '../components/OpenAiCard.jsx';
-import ItemCard from '../components/ItemCard.jsx';
+import HeroFogScene from '../components/HeroFogScene.jsx';
+import Header from '../components/Header.jsx';
+import DayNightController from '../components/DayNightController.jsx';
+import { Link, useRouter } from '../context/RouterContext.jsx';
+import { PROOF_METRICS, CASE_STUDIES, MEDIA_ASSETS } from '../data/teralioData.js';
+import { useTheme } from '../context/ThemeContext.jsx';
+import { ArrowRightIcon } from '../components/Icons.jsx';
+
+const ARCHITECTURE_ROWS = [
+  {
+    num: '01 / 03',
+    title: 'Charcoal Solar Slate',
+    sub: 'Structural Building Envelope',
+    desc: 'Edge-to-edge tempered matte glass replaces conventional shingles down to the decking. Color-matched active and perimeter courses preserve clean Nordic gable geometry with zero exposed aluminum racks.',
+    specs: [
+      '23.8% N-Type TOPCon cell yield',
+      '21.4 kg/m² dead load (lighter than slate)',
+      'UL 790 Class A fire & Class 4 hail rated',
+    ],
+  },
+  {
+    num: '02 / 03',
+    title: 'Teralio LFP Vault',
+    sub: 'Cobalt-Free Thermal Storage',
+    desc: 'Modular prismatic lithium iron phosphate stacks mount flush inside garage or utility walls, banking cheap midday photons to run hydronic heat pumps and dual EV chargers through sub-zero nights.',
+    specs: [
+      '14.4 to 57.6 kWh modular capacity',
+      'Self-warming operation down to -25°C',
+      '10,000-cycle architectural endurance',
+    ],
+  },
+  {
+    num: '03 / 03',
+    title: 'AI Smart Controller',
+    sub: 'Wholesale VPP & Zero-Bill Engine',
+    desc: 'Predicting local barometric cloud cover against 15-minute wholesale spot tariffs, our Silicon-Carbide gateway sells evening grid surges automatically—funding 84 consecutive months of $0 bills.',
+    specs: [
+      '< 10 ms solid-state blackout islanding',
+      'Automated NordPool / EPEX / ISO bidding',
+      'Contractual 7-year $0 utility settlement',
+    ],
+  },
+];
 
 export const HomePage = () => {
-  const [backendHealth, setBackendHealth] = useState(null);
-  const [loadingHealth, setLoadingHealth] = useState(false);
-  const [items, setItems] = useState([]);
-  const [itemsSource, setItemsSource] = useState('');
-  const [loadingItems, setLoadingItems] = useState(false);
-
-  const checkBackend = async () => {
-    setLoadingHealth(true);
-    try {
-      const res = await fetch('/api/health');
-      const data = await res.json();
-      setBackendHealth({ status: 'ok', data });
-    } catch (err) {
-      setBackendHealth({ status: 'error', message: err.message });
-    } finally {
-      setLoadingHealth(false);
-    }
-  };
-
-  const fetchItems = async () => {
-    setLoadingItems(true);
-    try {
-      const res = await fetch('/api/items');
-      const json = await res.json();
-      if (json.success) {
-        setItems(json.data);
-        setItemsSource(json.source);
-      }
-    } catch (err) {
-      console.warn('Gagal memuat item dari backend:', err.message);
-    } finally {
-      setLoadingItems(false);
-    }
-  };
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  const [monthlyBill, setMonthlyBill] = useState(265);
+  const { navigate } = useRouter();
+  const { isNight } = useTheme();
+  const { hero } = MEDIA_ASSETS;
 
   useEffect(() => {
-    checkBackend();
-    fetchItems();
+    const onScroll = () => {
+      const threshold = (window.innerHeight || 720) * 0.82;
+      setScrolledPastHero(window.scrollY > threshold);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const sevenYearSavings = Math.round(monthlyBill * 12 * 7.95);
+
   return (
-    <main className="page-container" data-testid="home-page">
-      <section className="hero-section">
-        <h1 className="hero-title">Teralio Fullstack Platform</h1>
-        <p className="hero-subtitle">
-          Vite (React) + Express Backend + Inisialisasi Supabase Database & Integrasi OpenAI.
-          Siap dijalankan secara lokal maupun dideploy ke Vercel tanpa kendala.
-        </p>
+    <div data-testid="home-page">
+      <Header floating visible={scrolledPastHero} />
+
+      {/* Full-Viewport Morning / Night WebGL2 Fog Hero */}
+      <HeroFogScene />
+
+      {/* Section 1: Hairline Swiss Architectural Proof Ledger */}
+      <section className="section--ledger" aria-label="Verified performance specifications">
+        <div className="container">
+          <div className="proof-ledger">
+            {PROOF_METRICS.map((m) => (
+              <div className="proof-ledger__cell" key={m.label}>
+                <div className="proof-ledger__value">{m.value}</div>
+                <div className="proof-ledger__label">{m.label}</div>
+                <p className="proof-ledger__detail">{m.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="dashboard-grid">
-        {/* Card Supabase Frontend */}
-        <SupabaseStatus />
+      {/* Section 2: Asymmetric Editorial System Specification */}
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">01 — Integrated Architecture</span>
+              <h2 className="section-title">
+                One roofline. Zero bolt-on racks.
+                <br />
+                Seven years of $0 bills.
+              </h2>
+            </div>
+            <Link to="/how-it-works" className="btn-pill btn-pill--ghost">
+              <span>Explore System Engineering</span>
+              <ArrowRightIcon />
+            </Link>
+          </div>
 
-        {/* Card Backend Express */}
-        <div className="card" data-testid="backend-status-card">
-          <h3 className="card-title">
-            <span>🚀</span> Status Express Backend
-          </h3>
-          <div className="card-content">
-            <p>
-              Status Server:{' '}
-              {backendHealth?.status === 'ok' ? (
-                <span className="status-indicator connected">✅ Online (200 OK)</span>
-              ) : backendHealth?.status === 'error' ? (
-                <span className="status-indicator error">❌ Offline (Belum Dinyalakan)</span>
-              ) : (
-                <span className="status-indicator pending">⏳ Memeriksa...</span>
-              )}
-            </p>
+          <div className="arch-rows">
+            {ARCHITECTURE_ROWS.map((row) => (
+              <article className="arch-row" key={row.num}>
+                <div className="arch-row__num">{row.num}</div>
+                <div>
+                  <h3 className="arch-row__title">{row.title}</h3>
+                  <span className="arch-row__sub">{row.sub}</span>
+                </div>
+                <p className="arch-row__desc">{row.desc}</p>
+                <ul className="arch-row__specs">
+                  {row.specs.map((sp) => (
+                    <li key={sp}>{sp}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {backendHealth?.data && (
-              <p style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
-                <strong>Layanan:</strong> {backendHealth.data.service} <br />
-                <strong>Uptime:</strong> {Math.round(backendHealth.data.uptime)} detik
+      {/* Section 3: Interactive 24-Hour Smart Controller Console */}
+      <section className="section section--alt">
+        <div className="container">
+          <DayNightController />
+        </div>
+      </section>
+
+      {/* Section 4: Audited Residential Installations */}
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">03 — Audited Field Ledger</span>
+              <h2 className="section-title">From Nordic snowstorms to Pacific fog.</h2>
+              <p className="lead-copy">
+                Real residences running heat pumps, induction kitchens, and electric vehicles with
+                verified $0.00 utility statements.
               </p>
-            )}
+            </div>
+            <Link to="/our-cases" className="btn-pill btn-pill--ghost">
+              <span>Inspect All 6 Case Audits</span>
+              <ArrowRightIcon />
+            </Link>
+          </div>
 
-            <div style={{ marginTop: '1rem' }}>
+          <div className="grid-3">
+            {CASE_STUDIES.slice(0, 3).map((cs) => (
+              <article className="case-card" key={cs.id}>
+                <div className="case-card__media">
+                  <img
+                    src={
+                      isNight
+                        ? cs.preferNightImg
+                          ? hero.groundNight
+                          : hero.groundMorning
+                        : cs.preferNightImg
+                        ? hero.groundMorning
+                        : hero.groundNight
+                    }
+                    alt={cs.title}
+                  />
+                  <span className="case-card__badge">{cs.climate}</span>
+                  <span className="case-card__zero">{cs.currentBill} Verified</span>
+                </div>
+                <div className="case-card__content">
+                  <div>
+                    <div className="case-card__meta">{cs.location}</div>
+                    <h3 className="card-heading">{cs.title}</h3>
+                  </div>
+                  <p className="card-body">“{cs.quote}”</p>
+                  <div className="case-metrics-row">
+                    <div>
+                      <small>Array</small>
+                      <strong>{cs.systemSize}</strong>
+                    </div>
+                    <div>
+                      <small>Vault</small>
+                      <strong>{cs.storageSize}</strong>
+                    </div>
+                    <div>
+                      <small>Prior Bill</small>
+                      <strong>{cs.priorAnnualBill}</strong>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 5: Interactive 7-Year Guarantee Estimator */}
+      <section className="section section--alt">
+        <div className="container">
+          <div className="quote-banner">
+            <div>
+              <span className="eyebrow">04 — 84-Month Zero-Bill Guarantee</span>
+              <h2 className="section-title">
+                Calculate what seven years without an electricity bill saves you.
+              </h2>
+              <p className="lead-copy">
+                Slide your current average monthly electricity spend. Teralio models 4.5% annual
+                grid rate inflation—and replaces every statement for 7 years with $0.00.
+              </p>
+            </div>
+
+            <div className="stack-md">
+              <div className="range-field">
+                <div className="form-label">
+                  <span>Current Monthly Utility Bill</span>
+                  <strong className="tabular form-label__strong">${monthlyBill} / mo</strong>
+                </div>
+                <input
+                  type="range"
+                  min="100"
+                  max="650"
+                  step="15"
+                  value={monthlyBill}
+                  onChange={(e) => setMonthlyBill(Number(e.target.value))}
+                  aria-label="Current Monthly Utility Bill"
+                />
+              </div>
+
+              <div className="proposal-zero-box">
+                <div>
+                  <div className="proposal-zero-box__eyebrow">
+                    84-Month Guaranteed Utility Savings
+                  </div>
+                  <div className="proposal-zero-box__big tabular">
+                    ${sevenYearSavings.toLocaleString('en-US')}
+                  </div>
+                </div>
+                <div className="proposal-zero-box__right">
+                  <div className="proposal-zero-box__eyebrow">Your New Bill</div>
+                  <div className="proposal-zero-box__sub">$0 / mo</div>
+                </div>
+              </div>
+
               <button
-                className="btn btn-secondary"
-                onClick={checkBackend}
-                disabled={loadingHealth}
-                data-testid="test-backend-btn"
+                type="button"
+                className="btn-pill btn-pill--lg"
+                onClick={() => navigate(`/quote?bill=${monthlyBill}`)}
               >
-                {loadingHealth ? 'Memeriksa...' : '🔄 Uji Ulang Koneksi Backend'}
+                <span>Configure My Roof &amp; Lock In $0</span>
+                <ArrowRightIcon />
               </button>
             </div>
           </div>
         </div>
-
-        {/* Card OpenAI Chatbot / Tester */}
-        <OpenAiCard />
       </section>
-
-      {/* Card Struktur Folder */}
-      <section className="card" style={{ marginBottom: '2.5rem' }}>
-        <h3 className="card-title">
-          <span>📁</span> Struktur Project Teralio Sesuai Permintaan
-        </h3>
-        <div className="card-content">
-          <pre
-            style={{
-              background: '#0f172a',
-              color: '#38bdf8',
-              padding: '1rem',
-              borderRadius: '8px',
-              overflowX: 'auto',
-              fontSize: '0.88rem',
-              lineHeight: '1.4',
-            }}
-          >
-{`project/
-├── frontend/
-│   ├── components/
-│   ├── pages/
-│   └── styles/
-├── backend/
-│   ├── api/
-│   ├── services/
-│   └── models/
-├── docs/
-└── README.md`}
-          </pre>
-        </div>
-      </section>
-
-      {/* Card Items */}
-      <section className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 className="card-title">
-            <span>📦</span> Data Items API {itemsSource ? `(${itemsSource})` : ''}
-          </h3>
-          <button className="btn btn-secondary" onClick={fetchItems} disabled={loadingItems}>
-            {loadingItems ? 'Memuat...' : 'Muat Ulang'}
-          </button>
-        </div>
-
-        <div className="items-list">
-          {items.length > 0 ? (
-            items.map((item) => <ItemCard key={item.id} item={item} />)
-          ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              {loadingItems ? 'Sedang memuat data...' : 'Tidak ada data item yang dimuat.'}
-            </p>
-          )}
-        </div>
-      </section>
-    </main>
+    </div>
   );
 };
 

@@ -134,3 +134,184 @@ Membuat item baru.
   ]
 }
 ```
+
+
+---
+
+## 6. Authentication: Registrasi Akun Baru
+Mendaftarkan akun mahasiswa baru menggunakan email dan password.
+
+- **URL:** `/api/auth/register`
+- **Method:** `POST`
+- **Headers:** `Content-Type: application/json`
+- **Request Body:**
+```json
+{
+  "email": "mahasiswa@teralio.com",
+  "password": "password123",
+  "fullName": "Ahmad Dani"
+}
+```
+- **Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Registrasi berhasil",
+  "data": {
+    "user": {
+      "id": "usr-12345",
+      "email": "mahasiswa@teralio.com",
+      "fullName": "Ahmad Dani",
+      "provider": "email"
+    },
+    "session": {
+      "accessToken": "eyJhbGciOi...",
+      "refreshToken": "...",
+      "expiresIn": 3600
+    }
+  }
+}
+```
+
+---
+
+## 7. Authentication: Login Email & Password
+Masuk ke akun yang sudah terdaftar.
+
+- **URL:** `/api/auth/login`
+- **Method:** `POST`
+- **Headers:** `Content-Type: application/json`
+- **Request Body:**
+```json
+{
+  "email": "mahasiswa@teralio.com",
+  "password": "password123"
+}
+```
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Login berhasil",
+  "data": {
+    "user": {
+      "id": "usr-12345",
+      "email": "mahasiswa@teralio.com",
+      "fullName": "Ahmad Dani"
+    },
+    "session": {
+      "accessToken": "eyJhbGciOi...",
+      "refreshToken": "...",
+      "expiresIn": 3600
+    }
+  }
+}
+```
+
+---
+
+## 8. Authentication: Login with Google (OAuth)
+Mendapatkan URL otentikasi Google untuk login sekali klik.
+
+- **URL:** `/api/auth/google`
+- **Method:** `GET`
+- **Query Params:**
+  - `redirectTo`: URL tujuan setelah otentikasi Google selesai (opsional)
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Google OAuth URL berhasil dibuat",
+  "data": {
+    "provider": "google",
+    "url": "https://accounts.google.com/o/oauth2/v2/auth?..."
+  }
+}
+```
+
+---
+
+## 9. Authentication: Lupa Password (Forgot Password)
+Mengirimkan tautan reset password ke email pengguna.
+
+- **URL:** `/api/auth/forgot-password`
+- **Method:** `POST`
+- **Headers:** `Content-Type: application/json`
+- **Request Body:**
+```json
+{
+  "email": "mahasiswa@teralio.com",
+  "redirectTo": "http://localhost:3000/auth/reset-password"
+}
+```
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Tautan reset password telah dikirimkan ke email Anda jika terdaftar"
+}
+```
+
+---
+
+## 10. Authentication: Reset Password Baru
+Memperbarui kata sandi dengan kata sandi baru.
+
+- **URL:** `/api/auth/reset-password`
+- **Method:** `POST`
+- **Headers:**
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <token-reset>` (opsional jika via token session)
+- **Request Body:**
+```json
+{
+  "newPassword": "newpassword2026"
+}
+```
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Password berhasil diperbarui"
+}
+```
+
+---
+
+## 11. Authentication: Ambil Profil Pengguna Aktif
+Mengambil data profil pengguna yang sedang login.
+
+- **URL:** `/api/auth/me`
+- **Method:** `GET`
+- **Headers:**
+  - `Authorization: Bearer <access-token>`
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "usr-12345",
+    "email": "mahasiswa@teralio.com",
+    "fullName": "Ahmad Dani",
+    "avatarUrl": "https://...",
+    "provider": "email"
+  }
+}
+```
+
+---
+
+## 12. Authentication: Logout
+Keluar dari sesi akun.
+
+- **URL:** `/api/auth/logout`
+- **Method:** `POST`
+- **Headers:**
+  - `Authorization: Bearer <access-token>`
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Berhasil keluar"
+}
+```

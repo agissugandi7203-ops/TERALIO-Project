@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { itemsController } from './itemsController.js';
+import { authController } from './authController.js';
 import { openaiService } from '../services/openaiService.js';
 
 const router = Router();
@@ -16,6 +17,15 @@ router.get('/health', (req, res) => {
 
 // Supabase integration status endpoint
 router.get('/supabase-status', itemsController.getSupabaseStatus);
+
+// Authentication & User Management Endpoints
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
+router.get('/auth/google', authController.getGoogleAuth);
+router.post('/auth/forgot-password', authController.forgotPassword);
+router.post('/auth/reset-password', authController.resetPassword);
+router.get('/auth/me', authController.getMe);
+router.post('/auth/logout', authController.logout);
 
 // Items CRUD endpoints
 router.get('/items', itemsController.getItems);
