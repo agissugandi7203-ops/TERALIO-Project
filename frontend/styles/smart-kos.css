@@ -22,6 +22,21 @@
 .teralio-inplatform-map-leaflet {
   width: 100%;
   height: 100%;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sharp high-DPI tile rendering without GPU blur or subpixel fuzziness */
+.teralio-inplatform-map-leaflet .leaflet-tile {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-style: flat;
+}
+
+.teralio-inplatform-map-leaflet .leaflet-tile-container {
+  contain: layout paint;
 }
 
 /* Custom Leaflet DivIcon Reset */
@@ -1170,19 +1185,25 @@
 }
 
 @media (max-width: 780px) {
-  .kos-place-overview {
+  .kos-place-overview,
+  .kos-place-overview.is-gmaps-minimal {
     top: auto;
     left: 0.65rem;
     right: 0.65rem;
     bottom: 0.65rem;
     width: auto;
-    max-height: 58vh;
+    max-width: none;
+    max-height: 56vh;
+    border-radius: 24px;
+    z-index: 26;
   }
 
-  .smart-kos-ai-sidebar {
+  .smart-kos-ai-sidebar,
+  .smart-kos-ai-sidebar.is-fixed-crosspage {
     inset: 0.5rem;
     width: auto;
     max-width: none;
+    border-radius: 24px;
   }
 }
 

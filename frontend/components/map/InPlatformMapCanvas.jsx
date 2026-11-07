@@ -3,11 +3,19 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Google Maps Tiles (100% Asli Google Maps, tanpa API key, tanpa watermark, tanpa billing)
-const GOOGLE_ROADMAP_URL =
-  'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
-const GOOGLE_HYBRID_URL =
-  'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+// Mendukung scale=2 otomatis untuk layar mobile Retina / High-DPI agar tidak blur atau pecah
 const GOOGLE_SUBDOMAINS = ['mt0', 'mt1', 'mt2', 'mt3'];
+
+export function getGoogleTileUrl(layerType = 'satellite') {
+  const isRetina =
+    typeof window !== 'undefined' &&
+    ((window.devicePixelRatio && window.devicePixelRatio >= 1.25) ||
+      (window.matchMedia &&
+        window.matchMedia('(-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi)').matches));
+  const scale = isRetina ? '&scale=2' : '';
+  const lyrs = layerType === 'satellite' ? 'y' : 'm';
+  return `https://{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}${scale}`;
+}
 
 function formatShortPrice(priceMonthly, priceStr) {
   const numeric = Number(priceMonthly);
@@ -73,6 +81,11 @@ export function InPlatformMapCanvas({
       zoomAnimation: !isZeroSizeEnv,
       fadeAnimation: !isZeroSizeEnv,
       markerZoomAnimation: !isZeroSizeEnv,
+      zoomSnap: 1, // Kunci integer zoom agar tile raster tidak mengalami fractional scaling blur di layar sentuh
+      zoomDelta: 1,
+      wheelDebounceTime: 80,
+      minZoom: 4,
+      maxZoom: 20,
     });
 
     if (map.attributionControl) {
@@ -95,7 +108,24 @@ export function InPlatformMapCanvas({
       resizeObserver.observe(el);
     }
 
+    const handleViewportChange = () => {
+      try {
+        map.invalidateSize({ pan: false });
+      } catch {
+        // ignore
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleViewportChange, { passive: true });
+      window.addEventListener('orientationchange', handleViewportChange, { passive: true });
+    }
+
     return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleViewportChange);
+        window.removeEventListener('orientationchange', handleViewportChange);
+      }
       if (resizeObserver) resizeObserver.disconnect();
       try {
         map.remove();
@@ -108,7 +138,7 @@ export function InPlatformMapCanvas({
     };
   }, []);
 
-  // 2. Sinkronisasi Layer Satelit Hybrid vs Peta Jalan (Roadmap)
+  // 2. Sinkronisasi Layer Satelit Hybrid vs Peta Jalan (Roadmap) dengan dukungan Retina / High-DPI
   useEffect(() => {
     const map = mapRef.current;
     const tileGroup = tileGroupRef.current;
@@ -116,19 +146,18 @@ export function InPlatformMapCanvas({
 
     tileGroup.clearLayers();
 
-    if (mapType === 'satellite') {
-      L.tileLayer(GOOGLE_HYBRID_URL, {
-        maxZoom: 20,
-        subdomains: GOOGLE_SUBDOMAINS,
-        attribution: '&copy; Google Maps',
-      }).addTo(tileGroup);
-    } else {
-      L.tileLayer(GOOGLE_ROADMAP_URL, {
-        maxZoom: 20,
-        subdomains: GOOGLE_SUBDOMAINS,
-        attribution: '&copy; Google Maps',
-      }).addTo(tileGroup);
-    }
+    const tileUrl = getGoogleTileUrl(mapType);
+    L.tileLayer(tileUrl, {
+      maxZoom: 20,
+      maxNativeZoom: 20,
+      minZoom: 4,
+      subdomains: GOOGLE_SUBDOMAINS,
+      attribution: '&copy; Google Maps',
+      tileSize: 256,
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateWhenZooming: true,
+    }).addTo(tileGroup);
   }, [mapType]);
 
   // 3. Animasi Kamera Halus (`flyTo`) saat AI mengarahkan ke lokasi kos / kampus berubah / zoom berubah

@@ -1474,6 +1474,7 @@ body.teralio-dashboard-body {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   z-index: 10;
   background: #dfe9f3;
 }
@@ -2034,19 +2035,80 @@ body.teralio-dashboard-body {
     display: inline-flex;
   }
 
+  /* Pastikan sidebar navigasi tertutup off-canvas di mobile kecuali saat menu dibuka */
+  .teralio-dashboard.is-fullpage-maps-mode .dash-sidebar {
+    transform: translateX(-120%);
+    width: var(--sidebar-expanded);
+    min-width: var(--sidebar-expanded);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .teralio-dashboard.is-fullpage-maps-mode .dash-sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  /* HUD Top-Left di mobile */
   .fullmap-hud-topleft,
-  .fullpage-gmaps-root.sidebar-is-expanded .fullmap-hud-topleft,
+  .fullpage-gmaps-root.sidebar-is-expanded .fullmap-hud-topleft {
+    left: 0.75rem;
+    top: 0.75rem;
+    right: auto;
+  }
+
+  /* HUD Top-Right di mobile: posisikan rapi di sudut atas kanan, jangan mengambang di tengah peta */
+  .fullmap-hud-topright,
+  .fullpage-gmaps-root.ai-sidebar-is-open .fullmap-hud-topright {
+    top: 0.75rem;
+    right: 0.75rem;
+    bottom: auto;
+    left: auto;
+  }
+
+  .fullmap-topright-bar {
+    gap: 0.35rem;
+  }
+
+  .map-campus-toggle,
+  .map-layer-toggle {
+    padding: 0.15rem 0.45rem;
+  }
+
+  .map-campus-select {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.2rem;
+    max-width: 130px;
+  }
+
+  .map-layer-btn {
+    padding: 0.28rem 0.6rem;
+    font-size: 0.72rem;
+  }
+
+  .map-zoom-stack {
+    margin-top: 0.35rem;
+  }
+
+  /* HUD Bottom Composer di mobile: reset translateX(-50%) agar tidak bergeser atau blur subpixel */
   .fullmap-hud-bottom,
   .fullpage-gmaps-root.sidebar-is-expanded .fullmap-hud-bottom {
-    left: 0.85rem;
-    right: 0.85rem;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  .fullmap-chat-dock {
+    max-width: none;
+    width: 100%;
   }
 
   .fullmap-floating-drawer {
-    left: 0.85rem;
-    right: 0.85rem;
+    left: 0.65rem;
+    right: 0.65rem;
     width: auto;
-    top: 5rem;
+    top: 4.5rem;
   }
 }
 
