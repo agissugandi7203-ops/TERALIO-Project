@@ -8,10 +8,12 @@
 .header {
   background-color: #ffffff;
   border-bottom: 1px solid var(--border-color);
-  padding: 1rem 2rem;
+  padding: 0.9rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -33,9 +35,73 @@
   color: var(--text-main);
 }
 
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .header-badges {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.header-auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border-color);
+}
+
+.header-user-pill {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+}
+
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.header-btn-ghost {
+  background: transparent;
+  color: #0f172a;
+  border: 1px solid var(--border-color);
+}
+
+.header-btn-ghost:hover {
+  background: #f1f5f9;
+  text-decoration: none;
+}
+
+.header-btn-dark {
+  background: #111214;
+  color: #ffffff;
+  border: 1px solid #111214;
+}
+
+.header-btn-dark:hover {
+  background: #000000;
+  transform: translateY(-1px);
+  text-decoration: none;
 }
 
 .badge {
@@ -222,12 +288,13 @@
   border-radius: 6px;
 }
 
-/* Footer */
-.footer {
-  border-top: 1px solid var(--border-color);
-  padding: 1.5rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  background: #ffffff;
+@media (max-width: 720px) {
+  .header-badges {
+    display: none;
+  }
+
+  .header-auth-actions {
+    padding-left: 0;
+    border-left: none;
+  }
 }

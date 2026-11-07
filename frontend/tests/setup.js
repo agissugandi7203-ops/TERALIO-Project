@@ -1,14 +1,50 @@
 import '@testing-library/jest-dom/vitest';
 
-// Di lingkungan jsdom tanpa kartu grafis / GPU fisik:
-// Return null untuk webgl / webgl2 agar komponen WebGL (seperti HeroFogScene)
-// secara otomatis menggunakan CSS/SVG fallback-nya tanpa crash.
+if (typeof window !== 'undefined') {
+  window.scrollTo = () => {};
+  window.scroll = () => {};
+
+  if (!window.HTMLElement.prototype.scrollIntoView) {
+    window.HTMLElement.prototype.scrollIntoView = () => {};
+  }
+
+  if (!window.IntersectionObserver) {
+    window.IntersectionObserver = class IntersectionObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+
+  if (!window.ResizeObserver) {
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+
+  if (!window.matchMedia) {
+    const matchMediaPolyfill = (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    });
+    window.matchMedia = matchMediaPolyfill;
+    globalThis.matchMedia = matchMediaPolyfill;
+  }
+}
+
 if (typeof HTMLCanvasElement !== 'undefined') {
-  const originalGetContext = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function (type, ...args) {
-    if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
-      return null;
-    }
-    return originalGetContext ? originalGetContext.apply(this, [type, ...args]) : null;
-  };
+  HTMLCanvasElement.prototype.getContext = () => null;
+}
+
+if (typeof HTMLMediaElement !== 'undefined') {
+  HTMLMediaElement.prototype.play = () => Promise.resolve();
+  HTMLMediaElement.prototype.pause = () => {};
 }

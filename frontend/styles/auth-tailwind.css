@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-gray: #1A1A1A;
+}
+
+body.auth-dark-mode {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+body.auth-light-mode {
+  background-color: #f2f4ef !important;
+  color: #14202f !important;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Dedicated High-Specificity Styles to protect Auth UI from base CSS overrides */
+[data-testid="auth-page"] button {
+  cursor: pointer;
+}
+
+/* Dark Theme (Night) */
+[data-testid="auth-page"].auth-theme-dark button[type="submit"],
+body.auth-dark-mode [data-testid="auth-page"] button[type="submit"] {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-dark button[type="submit"]:hover:not(:disabled),
+body.auth-dark-mode [data-testid="auth-page"] button[type="submit"]:hover:not(:disabled) {
+  background: #e5e5e5 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-testid="auth-page"].auth-theme-dark [data-testid^="social-btn-"],
+body.auth-dark-mode [data-testid="auth-page"] [data-testid^="social-btn-"] {
+  background: #121212 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-dark [data-testid^="social-btn-"]:hover:not(:disabled),
+body.auth-dark-mode [data-testid="auth-page"] [data-testid^="social-btn-"]:hover:not(:disabled) {
+  background: #1c1c1c !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-testid="auth-page"].auth-theme-dark input,
+body.auth-dark-mode [data-testid="auth-page"] input {
+  background-color: #141414 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-dark input:focus,
+body.auth-dark-mode [data-testid="auth-page"] input:focus {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Light Theme (Morning) */
+[data-testid="auth-page"].auth-theme-light button[type="submit"],
+body.auth-light-mode [data-testid="auth-page"] button[type="submit"] {
+  background: #0d1117 !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-light button[type="submit"]:hover:not(:disabled),
+body.auth-light-mode [data-testid="auth-page"] button[type="submit"]:hover:not(:disabled) {
+  background: #1f2937 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 24px rgba(13, 17, 23, 0.18) !important;
+}
+
+[data-testid="auth-page"].auth-theme-light [data-testid^="social-btn-"],
+body.auth-light-mode [data-testid="auth-page"] [data-testid^="social-btn-"] {
+  background: #ffffff !important;
+  border: 1px solid rgba(20, 32, 47, 0.14) !important;
+  color: #14202f !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-light [data-testid^="social-btn-"]:hover:not(:disabled),
+body.auth-light-mode [data-testid="auth-page"] [data-testid^="social-btn-"]:hover:not(:disabled) {
+  background: #f7f8f4 !important;
+  border-color: rgba(20, 32, 47, 0.28) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-testid="auth-page"].auth-theme-light input,
+body.auth-light-mode [data-testid="auth-page"] input {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(20, 32, 47, 0.16) !important;
+  color: #14202f !important;
+  border-radius: 12px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[data-testid="auth-page"].auth-theme-light input::placeholder,
+body.auth-light-mode [data-testid="auth-page"] input::placeholder {
+  color: rgba(20, 32, 47, 0.35) !important;
+}
+
+[data-testid="auth-page"].auth-theme-light input:focus,
+body.auth-light-mode [data-testid="auth-page"] input:focus {
+  border-color: rgba(20, 32, 47, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(20, 32, 47, 0.1) !important;
+}
+
+[data-testid="auth-page"] [data-testid^="step-item-"] {
+  border-radius: 16px !important;
+  transition: all 0.25s ease !important;
+}
+
+/* Mobile Center Layout for Auth - Guarantees True Vertical & Horizontal Centering */
+@media (max-width: 1023px) {
+  [data-testid="auth-page"] {
+    min-height: 100dvh !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1.5rem 1rem !important;
+    overflow-y: auto !important;
+  }
+
+  [data-testid="auth-form-column"] {
+    width: 100% !important;
+    max-width: 380px !important;
+    margin: auto 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+  }
+
+  [data-testid="auth-form-wrapper"] {
+    width: 100% !important;
+    max-width: 380px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+
+  [data-testid="auth-top-bar"] {
+    position: absolute !important;
+    top: 1.25rem !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 380px !important;
+    margin: 0 auto !important;
+    padding: 0 0.5rem !important;
+  }
+}

@@ -1,24 +1,38 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const getSupabaseUrl = () => process.env.SUPABASE_URL || '';
+const getSupabaseKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = () => {
+  if (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST)) {
+    return false;
+  }
+  const url = getSupabaseUrl();
+  const key = getSupabaseKey();
   return (
-    Boolean(supabaseUrl) &&
-    Boolean(supabaseKey) &&
-    !supabaseUrl.includes('placeholder') &&
-    !supabaseKey.includes('placeholder')
+    Boolean(url) &&
+    Boolean(key) &&
+    !url.includes('placeholder') &&
+    !key.includes('placeholder') &&
+    (key.startsWith('ey') || key.startsWith('sb_') || key.split('.').length === 3)
   );
 };
 
 export const getSupabaseConfig = () => {
+  const url = getSupabaseUrl();
+  const key = getSupabaseKey();
   return {
-    url: supabaseUrl,
-    hasKey: Boolean(supabaseKey),
+    url,
+    hasKey: Boolean(key),
     isConfigured: isSupabaseConfigured(),
   };
 };
@@ -31,8 +45,8 @@ let supabaseInstance = null;
 
 export const getSupabaseClient = () => {
   if (!supabaseInstance) {
-    const validUrl = supabaseUrl || 'https://placeholder.supabase.co';
-    const validKey = supabaseKey || 'placeholder-key';
+    const validUrl = getSupabaseUrl() || 'https://placeholder.supabase.co';
+    const validKey = getSupabaseKey() || 'placeholder-key';
     supabaseInstance = createClient(validUrl, validKey, {
       auth: {
         persistSession: false,

@@ -1,14 +1,12 @@
 import app from './app.js';
-import dotenv from 'dotenv';
+import { config } from './config/env.js';
 
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 Express Backend running on http://localhost:${PORT}`);
   console.log(`📌 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📌 Supabase status: http://localhost:${PORT}/api/supabase-status`);
+  console.log(`📌 Integrations status: http://localhost:${PORT}/api/integrations/status`);
 });
 
 export default server;

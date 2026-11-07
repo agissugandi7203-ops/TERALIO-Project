@@ -52,6 +52,37 @@ export const authController = {
     }
   },
 
+  // GET /api/auth/github
+  async getGithubAuth(req, res, next) {
+    try {
+      const { redirectTo } = req.query;
+      const result = await authService.getOAuthUrl({ provider: 'github', redirectTo });
+      return res.status(200).json({
+        success: true,
+        message: 'GitHub OAuth URL berhasil dibuat',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/auth/oauth/:provider
+  async getOAuth(req, res, next) {
+    try {
+      const { provider } = req.params;
+      const { redirectTo } = req.query;
+      const result = await authService.getOAuthUrl({ provider, redirectTo });
+      return res.status(200).json({
+        success: true,
+        message: `${provider} OAuth URL berhasil dibuat`,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // POST /api/auth/forgot-password
   async forgotPassword(req, res, next) {
     try {

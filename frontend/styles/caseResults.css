@@ -1,0 +1,382 @@
+/* ==========================================================================
+   Elo One Results Section — Sunset Orange Case Study Cards
+   High-End Editorial Styling, Stacked Paper Frames, Lexend Typography
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
+.elo-results-section {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+}
+
+/* Header Container */
+.elo-header-wrap {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto clamp(36px, 5vw, 54px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.elo-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent-chip-bg);
+  color: var(--accent-lime);
+  border: 1px solid var(--border-strong);
+  margin-bottom: 18px;
+}
+
+.elo-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 8px #f97316;
+}
+
+/* Headline with staggered rising words */
+.elo-headline {
+  font-size: clamp(28px, 4.2vw, 48px);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.3em;
+  row-gap: 0.1em;
+}
+
+.elo-word-span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(16px);
+  animation: eloWordRise 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--w-idx, 0) * 45ms + 80ms);
+}
+
+@keyframes eloWordRise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Thin decorative rule */
+.elo-header-rule {
+  width: 52px;
+  height: 2px;
+  background: linear-gradient(90deg, #b8460f, #f97316);
+  border-radius: 2px;
+  margin: 4px auto 18px;
+  transform-origin: center;
+  opacity: 0;
+  animation: eloRuleExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.4s;
+}
+
+@keyframes eloRuleExpand {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Lead text */
+.elo-lead {
+  font-size: clamp(15px, 1.8vw, 17.5px);
+  font-weight: 300;
+  line-height: 1.62;
+  color: var(--text-body);
+  max-width: 660px;
+  margin: 0 auto;
+  opacity: 0;
+  animation: eloFadeIn 0.75s ease forwards;
+  animation-delay: 0.35s;
+}
+
+@keyframes eloFadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 3 Sunset Orange Result Cards Grid */
+.elo-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(18px, 2.5vw, 32px);
+  align-items: stretch;
+  margin-bottom: clamp(36px, 5vw, 48px);
+}
+
+@media (max-width: 980px) {
+  .elo-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .elo-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual Card Styling */
+.elo-card {
+  position: relative;
+  border-radius: 24px;
+  padding: clamp(24px, 3vw, 32px);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 520px;
+  overflow: visible;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.38s ease;
+  opacity: 0;
+  transform: translateY(22px);
+  animation: eloCardRise 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--c-idx, 0) * 120ms + 420ms);
+}
+
+@keyframes eloCardRise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.elo-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+}
+
+/* Card Top: Client Name, Outcome & Monogram */
+.elo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.elo-client-name {
+  font-size: clamp(20px, 2.2vw, 24px);
+  font-weight: 600;
+  line-height: 1.2;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.elo-outcome {
+  font-size: 13.5px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.4;
+}
+
+.elo-monogram-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.elo-card:hover .elo-monogram-wrap {
+  transform: rotate(12deg) scale(1.08);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Stats Row: Side by Side with White Dividing Rule */
+.elo-stats-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.elo-stat-box {
+  flex: 1;
+}
+
+.elo-stat-val {
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.elo-stat-lbl {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.35;
+}
+
+.elo-stat-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.28);
+  margin: 0 clamp(10px, 1.5vw, 18px);
+}
+
+/* Stacked "Paper" Layers Framing the Photo */
+.elo-photo-stack {
+  position: relative;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 22px;
+}
+
+.elo-paper {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+/* Back translucent paper */
+.elo-paper-back {
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transform: translateY(-12px) rotate(-3.2deg) scaleX(0.92);
+  opacity: 0.75;
+}
+
+/* Mid translucent paper */
+.elo-paper-mid {
+  background: rgba(255, 255, 255, 0.24);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transform: translateY(-6px) rotate(2.4deg) scaleX(0.96);
+  opacity: 0.9;
+}
+
+/* Card hover fans out the paper layers */
+.elo-card:hover .elo-paper-back {
+  transform: translateY(-18px) rotate(-5.5deg) scaleX(0.94);
+  opacity: 0.95;
+}
+
+.elo-card:hover .elo-paper-mid {
+  transform: translateY(-10px) rotate(4deg) scaleX(0.98);
+  opacity: 1;
+}
+
+/* 3:2 Photo Container */
+.elo-photo-frame {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.elo-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.elo-card:hover .elo-photo-img {
+  transform: scale(1.05);
+}
+
+/* Bottom Centered Button */
+.elo-footer-btn-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  animation: eloFadeUp 0.65s ease forwards;
+  animation-delay: 0.82s;
+}
+
+@keyframes eloFadeUp {
+  to {
+    opacity: 1;
+  }
+}
+
+.elo-view-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 34px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  background: color-mix(in srgb, #ffffff calc((1 - var(--k)) * 100%), #142238);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, rgba(0, 0, 0, 0.15) calc((1 - var(--k)) * 100%), rgba(255, 255, 255, 0.18));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, calc(0.06 + var(--k) * 0.25));
+}
+
+.elo-view-more-btn:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, #000000 calc((1 - var(--k)) * 100%), #38bdf8);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, calc(0.12 + var(--k) * 0.35));
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .elo-word-span,
+  .elo-header-rule,
+  .elo-lead,
+  .elo-card,
+  .elo-footer-btn-wrap {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .elo-card:hover,
+  .elo-card:hover .elo-paper-back,
+  .elo-card:hover .elo-paper-mid,
+  .elo-card:hover .elo-photo-img,
+  .elo-view-more-btn:hover {
+    transform: none !important;
+  }
+}

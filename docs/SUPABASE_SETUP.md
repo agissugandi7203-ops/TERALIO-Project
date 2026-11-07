@@ -75,3 +75,21 @@ SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your-anon-public-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
 ```
+
+---
+
+## 5. (Opsional) Kolom Tambahan Hunian / Kos untuk Rekomendasi AI TERALIO
+Jika Anda ingin menyimpan data kos terverifikasi di Supabase agar langsung tampil pada **Dynamic Recommendation Sidebar** di halaman **Chat**, jalankan migrasi opsional berikut di **SQL Editor**:
+
+```sql
+ALTER TABLE public.items
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS price TEXT,
+  ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS contact_phone TEXT,
+  ADD COLUMN IF NOT EXISTS website TEXT,
+  ADD COLUMN IF NOT EXISTS rating NUMERIC(3, 2),
+  ADD COLUMN IF NOT EXISTS features TEXT[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS google_maps_uri TEXT;
+```

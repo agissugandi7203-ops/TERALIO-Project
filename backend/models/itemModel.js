@@ -3,12 +3,30 @@
  */
 
 export class ItemModel {
-  constructor({ id, title, description, category = 'General', createdAt = new Date().toISOString() }) {
+  constructor({
+    id,
+    title,
+    description,
+    category = 'General',
+    createdAt = new Date().toISOString(),
+    address = undefined,
+    price = undefined,
+    location = undefined,
+    contact = undefined,
+    features = undefined,
+    googleMapsUri = undefined,
+  }) {
     this.id = id;
     this.title = title;
     this.description = description;
     this.category = category;
     this.createdAt = createdAt;
+    if (address !== undefined) this.address = address;
+    if (price !== undefined) this.price = price;
+    if (location !== undefined) this.location = location;
+    if (contact !== undefined) this.contact = contact;
+    if (features !== undefined) this.features = features;
+    if (googleMapsUri !== undefined) this.googleMapsUri = googleMapsUri;
   }
 
   /**
@@ -41,12 +59,39 @@ export class ItemModel {
 
   static fromDatabaseRow(row) {
     if (!row) return null;
+    const location =
+      row.location && typeof row.location === 'object'
+        ? row.location
+        : typeof row.latitude === 'number' && typeof row.longitude === 'number'
+          ? { lat: row.latitude, lng: row.longitude }
+          : undefined;
+    const contact =
+      row.contact && typeof row.contact === 'object'
+        ? row.contact
+        : row.contact_phone || row.website
+          ? { phone: row.contact_phone || null, website: row.website || null }
+          : undefined;
+
     return new ItemModel({
       id: row.id,
-      title: row.title,
+      title: row.title || row.name,
       description: row.description,
-      category: row.category,
+      category: row.category || row.type,
       createdAt: row.created_at || row.createdAt,
+      address: row.address,
+      price:
+        row.price ||
+        (typeof row.price_monthly === 'number'
+          ? `Rp${row.price_monthly.toLocaleString('id-ID')} / bln`
+          : undefined),
+      location,
+      contact,
+      features: Array.isArray(row.features)
+        ? row.features
+        : Array.isArray(row.facilities)
+          ? row.facilities
+          : undefined,
+      googleMapsUri: row.google_maps_uri || row.googleMapsUri,
     });
   }
 }

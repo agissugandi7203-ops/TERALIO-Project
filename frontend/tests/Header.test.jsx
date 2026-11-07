@@ -1,37 +1,43 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import React from 'react';
 import Header from '../components/Header.jsx';
+import { AtmosphereProvider } from '../context/AtmosphereContext.jsx';
 import { RouterProvider } from '../context/RouterContext.jsx';
-import { ThemeProvider } from '../context/ThemeContext.jsx';
 
-describe('Teralio Header & Theme Toggle', () => {
-  it('renders Teralio brand, navigation links, Sign Up, and Light/Dark theme controls', () => {
+describe('Teralio Unified Header', () => {
+  it('merender satu header seragam lengkap dengan navigasi, tombol ganti tema, dan tombol Get Started', () => {
     render(
-      <ThemeProvider>
-        <RouterProvider initialPath="/how-it-works">
+      <AtmosphereProvider>
+        <RouterProvider initialPath="/">
           <Header />
         </RouterProvider>
-      </ThemeProvider>
+      </AtmosphereProvider>
     );
 
-    expect(screen.getByText('Teralio')).toBeInTheDocument();
-    expect(screen.getByText('How It Works')).toBeInTheDocument();
-    expect(screen.getByText('Our Cases')).toBeInTheDocument();
-    expect(screen.getByText('About Us')).toBeInTheDocument();
-    expect(screen.getByText('Careers')).toBeInTheDocument();
-    expect(screen.getByText('Resources')).toBeInTheDocument();
-    expect(screen.getByText('Customers')).toBeInTheDocument();
-    expect(screen.getByText('Sign Up')).toBeInTheDocument();
-    expect(screen.getByText('Get an Instant Quote')).toBeInTheDocument();
+    const header = screen.getByTestId('header-component');
+    expect(header).toHaveClass('unified-header');
+    expect(within(header).getByText('Teralio')).toBeInTheDocument();
 
-    const lightBtn = screen.getByRole('button', { name: /Light/i });
-    const darkBtn = screen.getByRole('button', { name: /Dark/i });
-    expect(darkBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(lightBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(within(header).getByText('How It Works')).toHaveAttribute('href', '/how-it-works');
+    expect(within(header).getByText('Our Cases')).toHaveAttribute('href', '/cases');
+    expect(within(header).getByText('Pricing')).toHaveAttribute('href', '/pricing');
+    expect(within(header).getByText('Customers')).toHaveAttribute('href', '/customers');
+    expect(within(header).getByText('FAQ')).toHaveAttribute('href', '/resources');
+    expect(within(header).queryByText('About Us')).not.toBeInTheDocument();
 
-    fireEvent.click(lightBtn);
-    expect(lightBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(darkBtn).toHaveAttribute('aria-pressed', 'false');
+    // Tombol ganti tema (Morning / Night) di header
+    const themeSwitch = within(header).getByTestId('header-theme-toggle');
+    expect(themeSwitch).toBeInTheDocument();
+    const morningThemeBtn = within(themeSwitch).getByRole('button', { name: /Morning/i });
+    const nightThemeBtn = within(themeSwitch).getByRole('button', { name: /Night/i });
+    expect(nightThemeBtn).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(morningThemeBtn);
+    expect(morningThemeBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Tombol Get Started
+    const getStartedBtn = within(header).getByTestId('header-get-started-btn');
+    expect(getStartedBtn).toBeInTheDocument();
+    expect(getStartedBtn).toHaveTextContent('Get Started');
   });
 });
