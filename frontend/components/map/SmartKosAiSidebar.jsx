@@ -248,7 +248,7 @@ export function SmartKosAiSidebar({
       realtimeClientRef.current = client;
       try {
         await client.connect({
-          autoGreet: true,
+          autoGreet: false,
           reasoningEffort: latestPropsRef.current.thinkingEnabled ? 'high' : 'low',
           userContext: {
             activeCampus: latestPropsRef.current.activeCampusName,

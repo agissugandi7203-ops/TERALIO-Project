@@ -124,7 +124,7 @@ export function FullscreenVoiceOverlay({
 
     try {
       await client.connect({
-        autoGreet: true,
+        autoGreet: false,
         userContext: latestCallbacksRef.current.userContext,
         reasoningEffort: latestCallbacksRef.current.thinkingEnabled ? 'high' : 'low',
       });
