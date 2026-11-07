@@ -140,6 +140,7 @@ export default function AuthPage({
   }, [isNight]);
 
   const isLogin = mode === 'login';
+  const isForgot = mode === 'forgot';
 
   const handleInputChange = (field) => (e) => {
     const val = e.target.value;
@@ -157,7 +158,8 @@ export default function AuthPage({
     setStatusMessage(null);
     setActivePhase(1);
     if (onNavigate) {
-      onNavigate(targetMode === 'login' ? '/login' : '/signup', { replace: true });
+      if (targetMode === 'login') onNavigate('/login', { replace: true });
+      else if (targetMode === 'signup') onNavigate('/signup', { replace: true });
     }
   };
 
@@ -200,6 +202,25 @@ export default function AuthPage({
 
     if (!formData.email.trim()) {
       setStatusMessage({ type: 'error', text: 'Email wajib diisi.' });
+      return;
+    }
+
+    if (isForgot) {
+      setLoading(true);
+      try {
+        const result = await authApi.forgotPassword(formData.email);
+        setStatusMessage({
+          type: 'success',
+          text: result?.message || 'Tautan reset password berhasil dikirim ke email Anda! Periksa kotak masuk atau spam.',
+        });
+      } catch (err) {
+        setStatusMessage({
+          type: 'error',
+          text: err.message || 'Gagal mengirim email reset password. Pastikan email Anda sudah terdaftar.',
+        });
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -394,44 +415,50 @@ export default function AuthPage({
             {/* Header */}
             <motion.div variants={formItemVariants} className="space-y-1.5">
               <h2 className={`text-2xl sm:text-3xl font-semibold tracking-tight ${isNight ? 'text-white' : 'text-[#14202f]'}`}>
-                {isLogin ? 'Welcome Back' : 'Create New Profile'}
+                {isForgot ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create New Profile'}
               </h2>
               <p className={`text-xs sm:text-sm ${isNight ? 'text-white/40' : 'text-[#667587]'}`}>
-                {isLogin
+                {isForgot
+                  ? 'Masukkan email terdaftar Anda untuk menerima link reset kata sandi.'
+                  : isLogin
                   ? 'Input your credentials to access your Teralio space.'
                   : 'Input your basic details to begin the journey.'}
               </p>
             </motion.div>
 
             {/* Social Buttons */}
-            <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-3">
-              <SocialButton
-                icon={<ChromeIcon />}
-                label="Google"
-                disabled={loading || Boolean(socialLoading)}
-                loading={socialLoading === 'Google'}
-                onClick={() => handleSocialAuth('Google')}
-                isNight={isNight}
-              />
-              <SocialButton
-                icon={<GithubIcon />}
-                label="Github"
-                disabled={loading || Boolean(socialLoading)}
-                loading={socialLoading === 'Github'}
-                onClick={() => handleSocialAuth('Github')}
-                isNight={isNight}
-              />
-            </motion.div>
+            {!isForgot && (
+              <>
+                <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-3">
+                  <SocialButton
+                    icon={<ChromeIcon />}
+                    label="Google"
+                    disabled={loading || Boolean(socialLoading)}
+                    loading={socialLoading === 'Google'}
+                    onClick={() => handleSocialAuth('Google')}
+                    isNight={isNight}
+                  />
+                  <SocialButton
+                    icon={<GithubIcon />}
+                    label="Github"
+                    disabled={loading || Boolean(socialLoading)}
+                    loading={socialLoading === 'Github'}
+                    onClick={() => handleSocialAuth('Github')}
+                    isNight={isNight}
+                  />
+                </motion.div>
 
-            {/* Divider */}
-            <motion.div variants={formItemVariants} className="relative flex items-center justify-center my-0.5">
-              <div className={`w-full border-t ${isNight ? 'border-white/10' : 'border-[#14202f]/12'}`} />
-              <span className={`absolute px-3 text-[11px] font-medium uppercase tracking-widest ${
-                isNight ? 'bg-black text-white/40' : 'bg-[#f2f4ef] text-[#14202f]/50'
-              }`}>
-                Or
-              </span>
-            </motion.div>
+                {/* Divider */}
+                <motion.div variants={formItemVariants} className="relative flex items-center justify-center my-0.5">
+                  <div className={`w-full border-t ${isNight ? 'border-white/10' : 'border-[#14202f]/12'}`} />
+                  <span className={`absolute px-3 text-[11px] font-medium uppercase tracking-widest ${
+                    isNight ? 'bg-black text-white/40' : 'bg-[#f2f4ef] text-[#14202f]/50'
+                  }`}>
+                    Or
+                  </span>
+                </motion.div>
+              </>
+            )}
 
             {/* Feedback Alert */}
             {statusMessage && (
@@ -468,7 +495,7 @@ export default function AuthPage({
 
             {/* Form Layout */}
             <motion.form variants={formItemVariants} onSubmit={handleSubmit} className="space-y-3.5" noValidate>
-              {!isLogin && (
+              {!isLogin && !isForgot && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <InputGroup
                     label="First Name"
@@ -503,29 +530,48 @@ export default function AuthPage({
                 isNight={isNight}
               />
 
-              <InputGroup
-                label="Password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                required
-                value={formData.password}
-                onChange={handleInputChange('password')}
-                helperText={!isLogin ? 'Requires at least 8 symbols.' : undefined}
-                isNight={isNight}
-                rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    data-testid="toggle-password-btn"
-                    className={`${isNight ? 'text-white/40 hover:text-white' : 'text-[#14202f]/50 hover:text-[#14202f]'} transition-colors cursor-pointer`}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                }
-              />
+              {!isForgot && (
+                <>
+                  <InputGroup
+                    label="Password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    required
+                    value={formData.password}
+                    onChange={handleInputChange('password')}
+                    helperText={!isLogin ? 'Requires at least 8 symbols.' : undefined}
+                    isNight={isNight}
+                    rightElement={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        data-testid="toggle-password-btn"
+                        className={`${isNight ? 'text-white/40 hover:text-white' : 'text-[#14202f]/50 hover:text-[#14202f]'} transition-colors cursor-pointer`}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    }
+                  />
+
+                  {isLogin && (
+                    <div className="flex justify-end -mt-1">
+                      <button
+                        type="button"
+                        onClick={() => switchMode('forgot')}
+                        data-testid="forgot-password-link"
+                        className={`text-xs font-medium hover:underline cursor-pointer ${
+                          isNight ? 'text-white/60 hover:text-white' : 'text-[#2563eb] hover:text-[#1d4ed8]'
+                        }`}
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
 
               <button
                 type="submit"
@@ -538,11 +584,23 @@ export default function AuthPage({
                 }`}
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>{isLogin ? 'Log In' : 'Create Account'}</span>
+                <span>{isForgot ? 'Send Reset Link' : isLogin ? 'Log In' : 'Create Account'}</span>
               </button>
 
               <p className={`text-center text-xs sm:text-sm pt-1 ${isNight ? 'text-white/40' : 'text-[#667587]'}`}>
-                {isLogin ? (
+                {isForgot ? (
+                  <>
+                    Remember your password?{' '}
+                    <button
+                      type="button"
+                      onClick={() => switchMode('login')}
+                      data-testid="switch-to-login-btn"
+                      className={`font-medium hover:underline cursor-pointer ${isNight ? 'text-white' : 'text-[#14202f]'}`}
+                    >
+                      Back to Log In
+                    </button>
+                  </>
+                ) : isLogin ? (
                   <>
                     New to Teralio?{' '}
                     <button

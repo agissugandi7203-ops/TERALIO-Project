@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const SATELLITE_BASE_URL =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const SATELLITE_LABELS_URL =
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png';
-const ROADMAP_BASE_URL =
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+// Google Maps Tiles (100% Asli Google Maps, tanpa API key, tanpa watermark, tanpa billing)
+const GOOGLE_ROADMAP_URL =
+  'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+const GOOGLE_HYBRID_URL =
+  'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+const GOOGLE_SUBDOMAINS = ['mt0', 'mt1', 'mt2', 'mt3'];
 
 function formatShortPrice(priceMonthly, priceStr) {
   const numeric = Number(priceMonthly);
@@ -117,21 +117,16 @@ export function InPlatformMapCanvas({
     tileGroup.clearLayers();
 
     if (mapType === 'satellite') {
-      L.tileLayer(SATELLITE_BASE_URL, {
-        maxZoom: 19,
-        attribution: '&copy; Esri & OpenStreetMap',
-      }).addTo(tileGroup);
-
-      L.tileLayer(SATELLITE_LABELS_URL, {
-        maxZoom: 19,
-        subdomains: 'abcd',
-        opacity: 0.92,
+      L.tileLayer(GOOGLE_HYBRID_URL, {
+        maxZoom: 20,
+        subdomains: GOOGLE_SUBDOMAINS,
+        attribution: '&copy; Google Maps',
       }).addTo(tileGroup);
     } else {
-      L.tileLayer(ROADMAP_BASE_URL, {
-        maxZoom: 19,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap & CARTO',
+      L.tileLayer(GOOGLE_ROADMAP_URL, {
+        maxZoom: 20,
+        subdomains: GOOGLE_SUBDOMAINS,
+        attribution: '&copy; Google Maps',
       }).addTo(tileGroup);
     }
   }, [mapType]);

@@ -320,30 +320,40 @@ export const authApi = {
         }
       }
 
-      // Ambil metadata asli dari Google
+      // Ambil metadata asli dari Google / GitHub
       const targetUser = sbUser || session?.user || null;
       const meta = targetUser?.user_metadata || jwtPayload?.user_metadata || {};
       const appMeta = targetUser?.app_metadata || jwtPayload?.app_metadata || {};
-      const email = targetUser?.email || jwtPayload?.email || '';
+      const email =
+        targetUser?.email ||
+        jwtPayload?.email ||
+        targetUser?.identities?.[0]?.identity_data?.email ||
+        meta.email ||
+        (meta.user_name ? `${meta.user_name}@users.noreply.github.com` : '');
 
       if (email) {
-        const googleFullName =
+        const resolvedFullName =
           meta.full_name ||
           meta.name ||
+          meta.user_name ||
+          meta.preferred_username ||
           (meta.given_name ? `${meta.given_name} ${meta.family_name || ''}`.trim() : '') ||
-          email.split('@')[0];
+          email.split('@')[0] ||
+          'Member';
 
-        const googleAvatar =
+        const resolvedAvatar =
           meta.avatar_url ||
           meta.picture ||
           '';
 
+        const provider = appMeta.provider || targetUser?.app_metadata?.provider || 'oauth';
+
         const user = {
-          id: targetUser?.id || jwtPayload?.sub || `usr-google-${Date.now()}`,
+          id: targetUser?.id || jwtPayload?.sub || `usr-oauth-${Date.now()}`,
           email,
-          fullName: googleFullName,
-          avatarUrl: googleAvatar,
-          provider: appMeta.provider || 'google',
+          fullName: resolvedFullName,
+          avatarUrl: resolvedAvatar,
+          provider,
           role: `${email} • Student`,
         };
 
@@ -412,13 +422,34 @@ export const authApi = {
   },
 
   /**
-   * Lupa Password
+   * Lupa Password (kirim email reset password)
    */
-  async forgotPassword(email) {
+  async forgotPassword(email, redirectTo = null) {
+    const defaultRedirect =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/login`
+        : 'http://localhost:3000/login';
+    const targetRedirect = redirectTo || defaultRedirect;
+
+    if (isSupabaseConfigured() && typeof window !== 'undefined') {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+          redirectTo: targetRedirect,
+        });
+        if (error) throw error;
+        return {
+          success: true,
+          message: 'Tautan reset password telah dikirim ke email Anda! Periksa inbox atau spam.',
+        };
+      } catch (sbErr) {
+        console.warn('[authApi] Supabase forgotPassword fallback to backend:', sbErr.message);
+      }
+    }
+
     const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, redirectTo: targetRedirect }),
     });
     return parseJsonResponse(res);
   },
