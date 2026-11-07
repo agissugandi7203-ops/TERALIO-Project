@@ -23,6 +23,18 @@ export const smartKosRouteSchema = z.object({
   mode: z.enum(['foot', 'driving', 'bike']).optional(),
 });
 
+export const surveyBookingSchema = z.object({
+  accommodationId: z.string().min(1).max(120),
+  accommodationName: z.string().max(200).optional(),
+  campusName: z.string().max(200).optional(),
+  address: z.string().max(350).optional(),
+  ownerName: z.string().max(150).optional(),
+  contactPhone: z.string().max(60).optional(),
+  scheduledLabel: z.string().min(3).max(160),
+  scheduledIso: z.string().max(40).optional(),
+  visitorName: z.string().max(120).optional(),
+});
+
 export const accommodationsController = {
   // GET /api/accommodations
   async listAccommodations(req, res, next) {
@@ -163,6 +175,39 @@ export const accommodationsController = {
         success: true,
         message: `Berhasil menyinkronkan ${result.insertedOrUpdated} data kos ke tabel public.accommodations di Supabase`,
         data: result,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // GET /api/accommodations/bookings
+  async listBookings(req, res, next) {
+    try {
+      const result = await accommodationsService.listSurveyBookings();
+      return res.status(200).json({
+        success: true,
+        source: result.source,
+        count: result.items.length,
+        data: result.items,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // POST /api/accommodations/bookings
+  async createBooking(req, res, next) {
+    try {
+      const parsed = surveyBookingSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return next(badRequest('Data jadwal survei tidak valid', parsed.error.issues));
+      }
+      const result = await accommodationsService.createSurveyBooking(parsed.data);
+      return res.status(201).json({
+        success: true,
+        source: result.source,
+        data: result.booking,
       });
     } catch (err) {
       return next(err);

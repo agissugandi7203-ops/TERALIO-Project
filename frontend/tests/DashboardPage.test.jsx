@@ -31,6 +31,38 @@ describe('TERALIO Dashboard Page & Collapsible Sidebar', () => {
           json: async () => ({ status: 'ok', service: 'Teralio Express Backend' }),
         });
       }
+      if (url === '/api/accommodations/bookings') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, data: [] }),
+        });
+      }
+      if (url === '/api/accommodations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            source: 'supabase',
+            data: [
+              {
+                id: 'kos-test-supa-1',
+                campusId: 'telkom',
+                name: 'Bojongsoang Green Suites',
+                address: 'Jl. Cikoneng No. 22, Bojongsoang, Bandung',
+                lat: -6.9756,
+                lng: 107.6368,
+                priceMonthly: 1150000,
+                price: 'Rp1.150.000 / bln',
+                distance: '950m dari Kampus',
+                type: 'Putri',
+                matchScore: 95,
+                rating: 4.8,
+                features: ['Kamar Mandi Dalam', 'Listrik Termasuk'],
+              },
+            ],
+          }),
+        });
+      }
       if (url === '/api/auth/login') {
         return Promise.resolve({
           ok: true,
@@ -163,17 +195,20 @@ describe('TERALIO Dashboard Page & Collapsible Sidebar', () => {
     expect(screen.getByTestId('subview-discovery')).toBeInTheDocument();
     expect(screen.getByText('Smart Kos Match & Listings')).toBeInTheDocument();
 
-    // Verifikasi tampilan utama adalah Google Maps interaktif dengan default mode Satelit (&t=h)
+    // Verifikasi tampilan utama adalah Peta Interaktif In-Platform (tanpa iframe eksternal "Open with Maps")
     expect(screen.getByTestId('smart-kos-google-map')).toBeInTheDocument();
-    const gmapsIframe = screen.getByTestId('google-maps-iframe');
-    expect(gmapsIframe).toBeInTheDocument();
-    expect(gmapsIframe.getAttribute('src')).toContain('maps.google.com/maps');
-    expect(gmapsIframe.getAttribute('src')).toContain('&t=h');
+    const mapCanvas = screen.getByTestId('in-platform-map-canvas');
+    expect(mapCanvas).toBeInTheDocument();
+    expect(mapCanvas).toHaveAttribute('data-map-type', 'satellite');
+    expect(screen.queryByTestId('google-maps-iframe')).not.toBeInTheDocument();
     expect(screen.getByTestId('map-type-satellite')).toHaveClass('is-active');
 
     // Pengguna dapat mengganti ke mode Peta (Roadmap)
     fireEvent.click(screen.getByTestId('map-type-roadmap'));
-    expect(screen.getByTestId('google-maps-iframe').getAttribute('src')).toContain('&t=m');
+    expect(screen.getByTestId('in-platform-map-canvas')).toHaveAttribute('data-map-type', 'roadmap');
+
+    // Sidebar percakapan kanan BELUM terbuka sebelum user mengirim prompt
+    expect(screen.queryByTestId('smart-kos-ai-sidebar')).not.toBeInTheDocument();
 
     // Verifikasi bahwa elemen yang diminta dihapus sudah tidak ada di DOM:
     expect(screen.queryByTestId('google-maps-search-input')).not.toBeInTheDocument();
@@ -191,15 +226,20 @@ describe('TERALIO Dashboard Page & Collapsible Sidebar', () => {
     expect(screen.getByTestId('composer-plus-btn')).toBeInTheDocument();
     expect(screen.getByTestId('composer-thinking-toggle')).toBeInTheDocument();
 
-    // Kirim prompt ke Chat AI di bawah peta -> memunculkan kartu rekomendasi AI
+    // Pastikan katalog kos dari backend selesai dimuat sebelum mengirim prompt
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/accommodations', expect.anything());
+    });
+
+    // Kirim prompt ke Chat AI -> mengaktifkan Sidebar Percakapan Kanan & membuka Place Overview In-Platform
     fireEvent.change(screen.getByTestId('chat-composer-input'), {
       target: { value: 'Cari kos putri kamar mandi dalam' },
     });
     fireEvent.click(screen.getByTestId('composer-send-btn'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('fullmap-ai-reply')).toBeInTheDocument();
-      expect(screen.getByText(/TERALIO AI/i)).toBeInTheDocument();
+      expect(screen.getByTestId('smart-kos-ai-sidebar')).toBeInTheDocument();
+      expect(screen.getByTestId('kos-place-overview')).toBeInTheDocument();
     });
 
     // Kembali ke Overview melalui menu navigasi sidebar

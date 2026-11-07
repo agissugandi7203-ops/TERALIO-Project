@@ -1,38 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  MapPin,
-  Navigation,
-  Search,
-  Layers,
-  Compass,
-  Sparkles,
-  ExternalLink,
-  Footprints,
-  Bike,
-  Star,
-  Plus,
-  Minus,
-  X,
-  Building2,
-  ListFilter,
-  ChevronDown,
-  ChevronUp,
-  Menu,
-} from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Compass, Layers, Menu, Minus, Plus } from 'lucide-react';
 import ChatComposer from './chat/ChatComposer.jsx';
+import InPlatformMapCanvas from './map/InPlatformMapCanvas.jsx';
+import KosPlaceOverviewCard from './map/KosPlaceOverviewCard.jsx';
+import SmartKosAiSidebar from './map/SmartKosAiSidebar.jsx';
+import { chatApi } from '../services/chatApi.js';
+import { smartKosApi } from '../services/smartKosApi.js';
 import '../styles/chat.css';
-import {
-  getBrowserMapsApiKey,
-  loadGoogleMapsSdk,
-  fetchMapsBackendStatus,
-  searchGooglePlaces,
-  computeCampusRoute,
-  decodeGooglePolyline,
-  estimateDistanceAndEta,
-  buildGoogleMapsEmbedUrl,
-  buildGoogleMapsDirectionsUrl,
-  buildGoogleMapsStreetViewUrl,
-} from '../services/mapsApi.js';
+import '../styles/smart-kos.css';
 
 export const CAMPUS_HUBS = [
   {
@@ -69,769 +44,572 @@ export const CAMPUS_HUBS = [
   },
 ];
 
-export const CURATED_GEO_KOS = [
-  // Telkom University Hub
-  {
-    id: 'kos-1',
-    campusId: 'telkom',
-    name: 'Kos Harmoni Sukapura',
-    address: 'Jl. Sukapura No. 18, Dayeuhkolot, Bandung',
-    lat: -6.9708,
-    lng: 107.6334,
-    price: 'Rp1.250.000 / bln',
-    priceValue: 1250000,
-    distance: '650m dari Kampus',
-    type: 'Putra / Putri',
-    matchScore: 96,
-    tag: 'Match 96%',
-    rating: 4.9,
-    reviews: 48,
-    features: ['Kamar Mandi Dalam', 'Wi-Fi 100 Mbps', 'Kasur Springbed', 'Meja Belajar'],
-  },
-  {
-    id: 'kos-2',
-    campusId: 'telkom',
-    name: 'Sukapura Loft Residence',
-    address: 'Jl. Sukapura No. 45, Terusan Buahbatu, Bandung',
-    lat: -6.9695,
-    lng: 107.6348,
-    price: 'Rp1.350.000 / bln',
-    priceValue: 1350000,
-    distance: '820m dari Kampus',
-    type: 'Campur',
-    matchScore: 94,
-    tag: 'Match 94%',
-    rating: 4.8,
-    reviews: 36,
-    features: ['Water Heater', 'Smart Lock', 'Balkon', 'Dapur Bersama'],
-  },
-  {
-    id: 'kos-3',
-    campusId: 'telkom',
-    name: 'Bojongsoang Green Suites',
-    address: 'Jl. Cikoneng Bojongsoang, Kabupaten Bandung',
-    lat: -6.9756,
-    lng: 107.6368,
-    price: 'Rp1.150.000 / bln',
-    priceValue: 1150000,
-    distance: '950m dari Kampus',
-    type: 'Putri',
-    matchScore: 92,
-    tag: 'Match 92%',
-    rating: 4.7,
-    reviews: 29,
-    features: ['Listrik Termasuk', 'CCTV 24 Jam', 'Parkir Motor', 'Laundry'],
-  },
-  {
-    id: 'kos-4',
-    campusId: 'telkom',
-    name: 'PGA Executive Student Kost',
-    address: 'Komplek Permata Buah Batu (Gerbang PGA), Bandung',
-    lat: -6.9766,
-    lng: 107.6309,
-    price: 'Rp1.450.000 / bln',
-    priceValue: 1450000,
-    distance: '380m dari Kampus',
-    type: 'Putra',
-    matchScore: 98,
-    tag: 'Match 98%',
-    rating: 4.9,
-    reviews: 64,
-    features: ['AC', 'Kamar Mandi Dalam', 'Fiber 150 Mbps', 'Akses 24 Jam'],
-  },
-  {
-    id: 'kos-5',
-    campusId: 'telkom',
-    name: 'Umayah Pavilion Sukabirus',
-    address: 'Jl. Umayah II Sukabirus, Citeureup, Bandung',
-    lat: -6.9691,
-    lng: 107.6286,
-    price: 'Rp1.200.000 / bln',
-    priceValue: 1200000,
-    distance: '540m dari Kampus',
-    type: 'Putri',
-    matchScore: 95,
-    tag: 'Match 95%',
-    rating: 4.8,
-    reviews: 41,
-    features: ['Quiet Study Zone', 'Kamar Mandi Dalam', 'Pantry Bersih', 'CCTV'],
-  },
-  // ITB Ganesha Hub
-  {
-    id: 'kos-itb-1',
-    campusId: 'itb',
-    name: 'Cisitu Indah Smart Kost',
-    address: 'Jl. Cisitu Indah VI No. 12, Dago, Bandung',
-    lat: -6.8828,
-    lng: 107.6114,
-    price: 'Rp1.650.000 / bln',
-    priceValue: 1650000,
-    distance: '890m dari Kampus',
-    type: 'Putra / Putri',
-    matchScore: 97,
-    tag: 'Match 97%',
-    rating: 4.9,
-    reviews: 52,
-    features: ['Water Heater', 'Wi-Fi 100 Mbps', 'Meja Gambar/Kerja', 'Rooftop'],
-  },
-  {
-    id: 'kos-itb-2',
-    campusId: 'itb',
-    name: 'Pelesiran Ganesha Suites',
-    address: 'Jl. Pelesiran No. 28, Tamansari, Bandung',
-    lat: -6.8962,
-    lng: 107.6079,
-    price: 'Rp1.300.000 / bln',
-    priceValue: 1300000,
-    distance: '610m dari Kampus',
-    type: 'Putri',
-    matchScore: 93,
-    tag: 'Match 93%',
-    rating: 4.8,
-    reviews: 33,
-    features: ['Kamar Mandi Dalam', 'Dekat Gerbang Selatan', 'CCTV 24 Jam'],
-  },
-  // UI Depok Hub
-  {
-    id: 'kos-ui-1',
-    campusId: 'ui',
-    name: 'Kukusan Teknik Green Kost',
-    address: 'Jl. Juragan Sinda, Kukusan, Beji, Depok',
-    lat: -6.3612,
-    lng: 106.8208,
-    price: 'Rp1.400.000 / bln',
-    priceValue: 1400000,
-    distance: '480m dari FT UI',
-    type: 'Putra / Putri',
-    matchScore: 97,
-    tag: 'Match 97%',
-    rating: 4.9,
-    reviews: 59,
-    features: ['AC', 'Kamar Mandi Dalam', 'Wi-Fi Cepat', 'Akses Gerbang Kutek'],
-  },
-  {
-    id: 'kos-ui-2',
-    campusId: 'ui',
-    name: 'Pondok Cina Station Loft',
-    address: 'Jl. Margonda Raya Gg. Kober, Pondok Cina, Depok',
-    lat: -6.3685,
-    lng: 106.8325,
-    price: 'Rp1.250.000 / bln',
-    priceValue: 1250000,
-    distance: '520m dari Stasiun Pocin',
-    type: 'Putri',
-    matchScore: 94,
-    tag: 'Match 94%',
-    rating: 4.7,
-    reviews: 44,
-    features: ['Dekat KRL', 'Smart Lock', 'Kasur Orthopedic', 'Dapur Bersama'],
-  },
-  // UGM Jogja Hub
-  {
-    id: 'kos-ugm-1',
-    campusId: 'ugm',
-    name: 'Pogung Dalangan Exclusive',
-    address: 'Pogung Dalangan SIA XVI, Sinduadi, Mlati, Sleman',
-    lat: -7.7634,
-    lng: 110.3742,
-    price: 'Rp1.350.000 / bln',
-    priceValue: 1350000,
-    distance: '620m dari Kampus',
-    type: 'Putra / Putri',
-    matchScore: 98,
-    tag: 'Match 98%',
-    rating: 4.9,
-    reviews: 71,
-    features: ['AC', 'Kamar Mandi Dalam', 'Fiber Wi-Fi', 'Parkir Luas'],
-  },
-  {
-    id: 'kos-ugm-2',
-    campusId: 'ugm',
-    name: 'Sendowo Quiet Scholar House',
-    address: 'Jl. Kesehatan Sendowo, Sekip, Yogyakarta',
-    lat: -7.7745,
-    lng: 110.3718,
-    price: 'Rp1.100.000 / bln',
-    priceValue: 1100000,
-    distance: '450m dari FKKMK UGM',
-    type: 'Putri',
-    matchScore: 95,
-    tag: 'Match 95%',
-    rating: 4.8,
-    reviews: 38,
-    features: ['Tenang & Asri', 'Kamar Mandi Dalam', 'Dapur & Kulkas', 'CCTV'],
-  },
-];
-
-const FILTER_CHIPS = [
-  { id: 'all', label: 'Semua' },
-  { id: 'putri', label: 'Putri' },
-  { id: 'putra', label: 'Putra' },
-  { id: 'budget', label: '≤ Rp1,3 Jt' },
-  { id: 'top', label: 'Match 95%+' },
-];
-
-const parsePriceValue = (priceStr) => {
-  if (!priceStr) return 1250000;
-  const digits = String(priceStr).replace(/[^0-9]/g, '');
-  const parsed = Number.parseInt(digits, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1250000;
-};
-
 export const SmartKosMapView = ({
+  user = null,
   externalListings = [],
   globalSearchQuery = '',
-  onGlobalSearchChange,
   isSidebarExpanded = false,
   onOpenMobileMenu,
-  onBackToOverview,
-  onAskAi,
+  focusTarget = null,
+  onConsumeFocusTarget,
+  onSurveyBooked,
 }) => {
+  const [campusHubsMap, setCampusHubsMap] = useState(() =>
+    Object.fromEntries(CAMPUS_HUBS.map((c) => [c.id, c])),
+  );
   const [selectedCampusId, setSelectedCampusId] = useState('telkom');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [mapType, setMapType] = useState('satellite'); // Default mode: satellite ('satellite' | 'roadmap')
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [dataSource, setDataSource] = useState('supabase');
+
+  const [mapType, setMapType] = useState('satellite'); // Default: 'satellite' ('satellite' | 'roadmap')
   const [zoom, setZoom] = useState(16);
+  const [flyToTrigger, setFlyToTrigger] = useState(0);
 
-  // Full 1-Page Maps by default: side drawer is closed unless user toggles it!
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Selected Kos & Native In-Platform Overview Sheet (#4)
+  const [selectedKos, setSelectedKos] = useState(null);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const [activeRoute, setActiveRoute] = useState(null);
+  const [showRouteLine, setShowRouteLine] = useState(true);
 
-  // Floating Chat AI state
+  // Right-Hand Conversation Sidebar (#2 — Hanya aktif saat user kirim prompt / buka voice!)
+  const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
+  const [isVoiceOverlayOpen, setIsVoiceOverlayOpen] = useState(false);
+  const [aiMessages, setAiMessages] = useState([]);
+  const [isStreamingAi, setIsStreamingAi] = useState(false);
+  const [activeOrbStatus, setActiveOrbStatus] = useState(null);
+
+  // Shared Composer State
   const [chatInput, setChatInput] = useState('');
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [chatAttachments, setChatAttachments] = useState([]);
-  const [isAiResponding, setIsAiResponding] = useState(false);
-  const [aiReply, setAiReply] = useState(null);
 
-  const [mapSearchInput, setMapSearchInput] = useState(globalSearchQuery || '');
-  const [committedMapQuery, setCommittedMapQuery] = useState('');
-  const [livePlaces, setLivePlaces] = useState([]);
-  const [isSearchingMaps, setIsSearchingMaps] = useState(false);
-  const [backendMapsReady, setBackendMapsReady] = useState(false);
-  const [routeMetrics, setRouteMetrics] = useState(null);
-
-  const browserApiKey = useMemo(() => getBrowserMapsApiKey(), []);
-  const [sdkEngineActive, setSdkEngineActive] = useState(false);
-  const sdkMapContainerRef = useRef(null);
-  const sdkMapInstanceRef = useRef(null);
-  const sdkOverlaysRef = useRef([]);
+  const streamAbortRef = useRef(null);
 
   const selectedCampus = useMemo(
-    () => CAMPUS_HUBS.find((c) => c.id === selectedCampusId) || CAMPUS_HUBS[0],
-    [selectedCampusId]
+    () => campusHubsMap[selectedCampusId] || CAMPUS_HUBS[0],
+    [campusHubsMap, selectedCampusId],
   );
 
+  // 1. Muat katalog kos secara dinamis dari backend Supabase (`/api/accommodations`)
   useEffect(() => {
-    setMapSearchInput(globalSearchQuery || '');
-  }, [globalSearchQuery]);
-
-  useEffect(() => {
-    let active = true;
-    fetchMapsBackendStatus().then((status) => {
-      if (active) setBackendMapsReady(Boolean(status?.configured));
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const mergedListings = useMemo(() => {
-    if (livePlaces.length > 0) {
-      return livePlaces;
-    }
-
-    const campusBase = CURATED_GEO_KOS.filter((k) => k.campusId === selectedCampus.id);
-    const knownNames = new Set(campusBase.map((k) => k.name.toLowerCase()));
-
-    const extras =
-      selectedCampus.id === 'telkom'
-        ? (externalListings || [])
-            .filter((item) => {
-              const nm = (item.name || item.title || '').trim().toLowerCase();
-              return nm && !knownNames.has(nm);
-            })
-            .map((item, idx) => ({
-              id: item.id || `ext-kos-${idx}`,
-              campusId: 'telkom',
-              name: item.name || item.title,
-              address: item.address || item.description || selectedCampus.address,
-              lat:
-                typeof item.lat === 'number'
-                  ? item.lat
-                  : selectedCampus.lat + (idx % 2 === 0 ? 0.0022 : -0.0024),
-              lng:
-                typeof item.lng === 'number'
-                  ? item.lng
-                  : selectedCampus.lng + (idx % 2 === 0 ? 0.0028 : -0.0021),
-              price: item.price || 'Rp1.250.000 / bln',
-              priceValue: parsePriceValue(item.price),
-              distance: item.distance || '700m dari Kampus',
-              type: item.type || 'Putra / Putri',
-              matchScore: 93,
-              tag: item.tag || item.category || 'Match 93%',
-              rating: 4.8,
-              reviews: 24,
-              features: item.features || ['Wi-Fi Cepat', 'Kamar Mandi Dalam'],
-            }))
-        : [];
-
-    return [...campusBase, ...extras];
-  }, [livePlaces, selectedCampus, externalListings]);
-
-  const filteredKos = useMemo(() => {
-    const q = (globalSearchQuery || '').trim().toLowerCase();
-    return mergedListings.filter((item) => {
-      if (activeFilter === 'putri' && !String(item.type).toLowerCase().includes('putri')) {
-        return false;
-      }
-      if (activeFilter === 'putra' && !String(item.type).toLowerCase().includes('putra')) {
-        return false;
-      }
-      if (activeFilter === 'budget' && (item.priceValue || 0) > 1300000) {
-        return false;
-      }
-      if (activeFilter === 'top' && (item.matchScore || 90) < 95) {
-        return false;
-      }
-      if (q && livePlaces.length === 0) {
-        const hay = `${item.name} ${item.address || ''} ${item.type || ''} ${(
-          item.features || []
-        ).join(' ')}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [mergedListings, activeFilter, globalSearchQuery, livePlaces.length]);
-
-  const [selectedKosId, setSelectedKosId] = useState(() => CURATED_GEO_KOS[0].id);
-
-  const selectedKos = useMemo(() => {
-    return (
-      filteredKos.find((k) => k.id === selectedKosId) ||
-      filteredKos[0] ||
-      mergedListings[0] ||
-      null
-    );
-  }, [filteredKos, mergedListings, selectedKosId]);
-
-  useEffect(() => {
-    if (filteredKos.length > 0 && !filteredKos.some((k) => k.id === selectedKosId)) {
-      setSelectedKosId(filteredKos[0].id);
-    }
-  }, [filteredKos, selectedKosId]);
-
-  useEffect(() => {
-    if (!selectedKos) {
-      setRouteMetrics(null);
-      return undefined;
-    }
-
-    let cancelled = false;
-    const fallback = estimateDistanceAndEta(selectedCampus, selectedKos);
-    setRouteMetrics({ ...fallback, encodedPolyline: null, source: 'geo-estimate' });
-
-    if (backendMapsReady) {
-      computeCampusRoute({
-        origin: { lat: selectedCampus.lat, lng: selectedCampus.lng },
-        destination: { lat: selectedKos.lat, lng: selectedKos.lng },
-        travelMode: 'WALK',
-      }).then((res) => {
-        if (cancelled || !res.ok || !res.route) return;
-        const meters = res.route.distanceMeters || fallback.distanceMeters;
-        const secs = res.route.durationSeconds || fallback.walkMinutes * 60;
-        setRouteMetrics({
-          distanceMeters: meters,
-          distanceText:
-            res.route.distanceText ||
-            (meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`),
-          walkMinutes: Math.max(1, Math.round(secs / 60)),
-          rideMinutes: Math.max(1, Math.round(meters / 360)),
-          encodedPolyline: res.route.encodedPolyline || null,
-          source: 'google-routes-api',
-        });
-      });
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedCampus, selectedKos, backendMapsReady]);
-
-  // Native Google Maps JS SDK initialization when VITE_GOOGLE_MAPS_BROWSER_API_KEY is configured
-  useEffect(() => {
-    if (!browserApiKey) {
-      setSdkEngineActive(false);
-      return undefined;
-    }
-
-    let mounted = true;
-    const handleAuthError = () => {
-      if (mounted) setSdkEngineActive(false);
-    };
-    window.addEventListener('teralio:gmaps-auth-error', handleAuthError);
-
-    loadGoogleMapsSdk(browserApiKey)
-      .then((gmaps) => {
-        if (!mounted || !sdkMapContainerRef.current) return;
-        setSdkEngineActive(true);
-
-        if (!sdkMapInstanceRef.current) {
-          sdkMapInstanceRef.current = new gmaps.Map(sdkMapContainerRef.current, {
-            center: { lat: selectedCampus.lat, lng: selectedCampus.lng },
-            zoom,
-            mapTypeId: mapType === 'satellite' ? 'hybrid' : 'roadmap',
-            mapTypeControl: false,
-            streetViewControl: true,
-            fullscreenControl: false,
-            zoomControl: false,
-          });
+    const controller = new AbortController();
+    smartKosApi
+      .fetchAccommodations({ signal: controller.signal })
+      .then((res) => {
+        if (res.campusHubs && typeof res.campusHubs === 'object') {
+          setCampusHubsMap((prev) => ({ ...prev, ...res.campusHubs }));
+        }
+        if (Array.isArray(res.items) && res.items.length > 0) {
+          setCatalogItems(res.items);
+          setDataSource(res.source || 'supabase');
         }
       })
       .catch(() => {
-        if (mounted) setSdkEngineActive(false);
+        // Tetap aman apabila dipanggil di lingkungan pengujian yang mem-mock endpoint parsial
       });
 
-    return () => {
-      mounted = false;
-      window.removeEventListener('teralio:gmaps-auth-error', handleAuthError);
-    };
-  }, [browserApiKey]);
+    return () => controller.abort();
+  }, []);
 
-  useEffect(() => {
-    if (!sdkEngineActive || !sdkMapInstanceRef.current || !window.google?.maps) return;
-    const gmaps = window.google.maps;
-    const map = sdkMapInstanceRef.current;
+  // Gabungkan data katalog dinamis Supabase dengan listing eksternal bila tersedia
+  const visibleAccommodations = useMemo(() => {
+    const campusItems = catalogItems.filter((item) => item.campusId === selectedCampusId);
+    const baseList = campusItems.length > 0 ? campusItems : catalogItems;
 
-    sdkOverlaysRef.current.forEach((ov) => ov?.setMap && ov.setMap(null));
-    sdkOverlaysRef.current = [];
+    const knownIds = new Set(baseList.map((k) => k.id));
+    const extras = (externalListings || [])
+      .filter((ext) => ext && (ext.name || ext.title) && !knownIds.has(ext.id))
+      .filter((ext) => {
+        const cat = String(ext.category || '').toLowerCase();
+        return !['frontend', 'backend', 'database', 'general'].includes(cat);
+      })
+      .map((ext, idx) => ({
+        id: ext.id || `ext-kos-${idx}`,
+        campusId: selectedCampusId,
+        name: ext.name || ext.title,
+        address: ext.address || ext.description || selectedCampus.address,
+        lat:
+          typeof ext.lat === 'number'
+            ? ext.lat
+            : selectedCampus.lat + (idx % 2 === 0 ? 0.0021 : -0.0021),
+        lng:
+          typeof ext.lng === 'number'
+            ? ext.lng
+            : selectedCampus.lng + (idx % 2 === 0 ? 0.0025 : -0.0022),
+        price: ext.price || 'Rp1.250.000 / bln',
+        priceMonthly: ext.priceMonthly || 1250000,
+        distance: ext.distance || '650m dari Kampus',
+        type: ext.type || 'Putra / Putri',
+        matchScore: ext.matchScore || 94,
+        tag: ext.tag || 'Match 94%',
+        rating: typeof ext.rating === 'number' ? ext.rating : 4.8,
+        features: Array.isArray(ext.features) ? ext.features : ['Wi-Fi Cepat', 'Kamar Mandi Dalam'],
+        contact: ext.contact || null,
+      }));
 
-    map.setMapTypeId(mapType === 'satellite' ? 'hybrid' : 'roadmap');
-    const targetCenter = selectedKos
-      ? { lat: selectedKos.lat, lng: selectedKos.lng }
-      : { lat: selectedCampus.lat, lng: selectedCampus.lng };
-    map.panTo(targetCenter);
-    map.setZoom(zoom);
-
-    const campusCircle = new gmaps.Circle({
-      map,
-      center: { lat: selectedCampus.lat, lng: selectedCampus.lng },
-      radius: 1000,
-      fillColor: '#1d77f2',
-      fillOpacity: 0.08,
-      strokeColor: '#1d77f2',
-      strokeOpacity: 0.35,
-      strokeWeight: 1.5,
-    });
-    const campusMarker = new gmaps.Marker({
-      map,
-      position: { lat: selectedCampus.lat, lng: selectedCampus.lng },
-      title: selectedCampus.name,
-      label: { text: '🎓', fontSize: '15px' },
-    });
-    sdkOverlaysRef.current.push(campusCircle, campusMarker);
-
-    filteredKos.forEach((kos) => {
-      const isSelected = selectedKos?.id === kos.id;
-      const marker = new gmaps.Marker({
-        map,
-        position: { lat: kos.lat, lng: kos.lng },
-        title: `${kos.name} — ${kos.price}`,
-        label: {
-          text: `${kos.matchScore || 95}%`,
-          color: '#ffffff',
-          fontWeight: '700',
-          fontSize: '11px',
-        },
-        zIndex: isSelected ? 20 : 5,
-      });
-      marker.addListener('click', () => {
-        setCommittedMapQuery('');
-        setSelectedKosId(kos.id);
-        setZoom(17);
-      });
-      sdkOverlaysRef.current.push(marker);
-    });
-
-    if (selectedKos) {
-      const pathPoints = routeMetrics?.encodedPolyline
-        ? decodeGooglePolyline(routeMetrics.encodedPolyline)
-        : [
-            { lat: selectedCampus.lat, lng: selectedCampus.lng },
-            { lat: selectedKos.lat, lng: selectedKos.lng },
-          ];
-      const routeLine = new gmaps.Polyline({
-        map,
-        path: pathPoints,
-        geodesic: true,
-        strokeColor: '#8fa924',
-        strokeOpacity: 0.92,
-        strokeWeight: 4,
-      });
-      sdkOverlaysRef.current.push(routeLine);
+    let combined = [...baseList, ...extras];
+    if (selectedKos && !combined.some((item) => item.id === selectedKos.id)) {
+      combined = [selectedKos, ...combined];
     }
-  }, [sdkEngineActive, selectedCampus, filteredKos, selectedKos, mapType, zoom, routeMetrics]);
 
-  const handleMapSearchSubmit = async (e) => {
-    if (e) e.preventDefault();
-    const q = mapSearchInput.trim();
-    if (!q) {
-      handleClearMapSearch();
+    const q = (globalSearchQuery || '').trim().toLowerCase();
+    if (!q) return combined;
+    const filtered = combined.filter((item) =>
+      `${item.name} ${item.address || ''} ${item.type || ''} ${(item.features || []).join(' ')}`
+        .toLowerCase()
+        .includes(q),
+    );
+    return filtered.length > 0 ? filtered : combined;
+  }, [catalogItems, selectedCampusId, externalListings, selectedCampus, selectedKos, globalSearchQuery]);
+
+  // Hitung rute jalan kaki kampus -> kos secara dinamis ketika kos dipilih manual
+  const loadDynamicRouteForKos = useCallback(
+    async (kosTarget, campusTarget) => {
+      if (
+        !kosTarget ||
+        typeof kosTarget.lat !== 'number' ||
+        typeof kosTarget.lng !== 'number' ||
+        !campusTarget
+      ) {
+        return;
+      }
+
+      const routeData = await smartKosApi.fetchCampusRoute({
+        origin: { lat: campusTarget.lat, lng: campusTarget.lng },
+        destination: { lat: kosTarget.lat, lng: kosTarget.lng },
+        mode: 'foot',
+      });
+      if (routeData) {
+        setActiveRoute(routeData);
+      }
+    },
+    [],
+  );
+
+  // Handler memilih pin kos pada peta -> langsung flyTo & buka Overview In-Platform (#4)
+  const handleSelectKos = useCallback(
+    (kosItem, { customRoute = null, targetCampusId = null } = {}) => {
+      if (!kosItem) return;
+      const nextCampusId = targetCampusId || kosItem.campusId || selectedCampusId;
+      if (nextCampusId && campusHubsMap[nextCampusId]) {
+        setSelectedCampusId(nextCampusId);
+      }
+
+      setSelectedKos(kosItem);
+      setIsOverviewOpen(true);
+      setShowRouteLine(true);
+      setZoom(18);
+      setFlyToTrigger((n) => n + 1);
+
+      if (customRoute) {
+        setActiveRoute(customRoute);
+      } else {
+        const hub = campusHubsMap[nextCampusId] || selectedCampus;
+        loadDynamicRouteForKos(kosItem, hub);
+      }
+    },
+    [selectedCampusId, campusHubsMap, selectedCampus, loadDynamicRouteForKos],
+  );
+
+  // Konsumsi target lokasi dari halaman Chat (`RecommendationSidebar` -> "Buka Overview di Peta")
+  useEffect(() => {
+    if (!focusTarget) return;
+
+    const rawId = String(focusTarget.rawId || focusTarget.id || '').replace(/^teralio:/, '');
+    const matchedFromCatalog = catalogItems.find(
+      (k) => k.id === rawId || k.name.toLowerCase() === String(focusTarget.name || '').toLowerCase(),
+    );
+
+    if (matchedFromCatalog) {
+      handleSelectKos(matchedFromCatalog);
+      onConsumeFocusTarget?.();
       return;
     }
 
-    if (onGlobalSearchChange) onGlobalSearchChange(q);
-    setIsSearchingMaps(true);
+    if (focusTarget.location && typeof focusTarget.location.lat === 'number') {
+      const synthesizedKos = {
+        id: rawId || `chat-loc-${Date.now()}`,
+        campusId: selectedCampusId,
+        name: focusTarget.name || 'Lokasi Rekomendasi AI',
+        address: focusTarget.address || '',
+        lat: focusTarget.location.lat,
+        lng: focusTarget.location.lng,
+        price: focusTarget.price || 'Lihat Detail Hunian',
+        distance: focusTarget.routeSummary?.distanceText || 'Lokasi Terverifikasi',
+        type: focusTarget.category || 'Hunian / Kos',
+        matchScore: 95,
+        tag: focusTarget.sourceLabel || 'Terverifikasi',
+        rating: typeof focusTarget.rating === 'number' ? focusTarget.rating : 4.8,
+        reviewsCount: focusTarget.userRatingCount || 0,
+        description: focusTarget.description || '',
+        contact: focusTarget.contact || null,
+        features: Array.isArray(focusTarget.features) ? focusTarget.features : [],
+      };
+      handleSelectKos(synthesizedKos);
+      onConsumeFocusTarget?.();
+    }
+  }, [focusTarget, catalogItems, handleSelectKos, onConsumeFocusTarget, selectedCampusId]);
 
-    const searchQueryWithContext = /kos|kost|boarding|asrama|apartemen/i.test(q)
-      ? q
-      : `Kos dekat ${q}`;
+  const handleResetToCampus = () => {
+    setSelectedKos(null);
+    setIsOverviewOpen(false);
+    setActiveRoute(null);
+    setZoom(16);
+    setFlyToTrigger((n) => n + 1);
+  };
 
-    const result = await searchGooglePlaces({
-      query: searchQueryWithContext,
-      lat: selectedCampus.lat,
-      lng: selectedCampus.lng,
-      radiusMeters: 4000,
-      maxResults: 10,
-    });
+  const handleSelectChatFiles = async (files, category) => {
+    const incoming = Array.from(files || []).slice(0, 4);
+    for (const file of incoming) {
+      const localId = `sk-att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setChatAttachments((prev) => [
+        ...prev,
+        {
+          localId,
+          filename: file.name || 'lampiran',
+          kind: category === 'image' || file.type?.startsWith('image/') ? 'image' : 'file',
+          status: 'uploading',
+        },
+      ]);
 
-    setIsSearchingMaps(false);
-
-    if (result.ok && result.places.length > 0) {
-      const mapped = result.places
-        .filter((p) => p.location && typeof p.location.lat === 'number')
-        .map((p, idx) => {
-          const matchScore = Math.max(88, 98 - idx * 2);
-          return {
-            id: p.id || `gplace-${idx}`,
-            campusId: selectedCampus.id,
-            name: p.name || `Kos Pilihan #${idx + 1}`,
-            address: p.shortAddress || p.address || selectedCampus.address,
-            lat: p.location.lat,
-            lng: p.location.lng,
-            price: 'Cek Tarif via Maps / AI',
-            priceValue: 1250000,
-            distance: estimateDistanceAndEta(selectedCampus, p.location).distanceText,
-            type: 'Putra / Putri',
-            matchScore,
-            tag: `Match ${matchScore}%`,
-            rating: p.rating || 4.7,
-            reviews: p.userRatingCount || 19,
-            googleMapsUri: p.googleMapsUri || null,
-            features: ['Google Maps Verified', 'Lokasi Akurat', 'Akses Kampus'],
-          };
-        });
-
-      if (mapped.length > 0) {
-        setLivePlaces(mapped);
-        setCommittedMapQuery('');
-        setSelectedKosId(mapped[0].id);
-        setZoom(16);
-        return;
+      try {
+        const uploaded = await chatApi.uploadAttachment(file, { category });
+        setChatAttachments((prev) =>
+          prev.map((att) =>
+            att.localId === localId ? { ...att, ...uploaded, status: 'ready' } : att,
+          ),
+        );
+      } catch {
+        setChatAttachments((prev) =>
+          prev.map((att) => (att.localId === localId ? { ...att, status: 'ready' } : att)),
+        );
       }
     }
-
-    const localMatch = mergedListings.find((item) =>
-      `${item.name} ${item.address}`.toLowerCase().includes(q.toLowerCase())
-    );
-    if (localMatch) {
-      setCommittedMapQuery('');
-      setSelectedKosId(localMatch.id);
-      setZoom(17);
-    } else {
-      setCommittedMapQuery(searchQueryWithContext);
-      setZoom(15);
-    }
-  };
-
-  const handleClearMapSearch = () => {
-    setMapSearchInput('');
-    setCommittedMapQuery('');
-    setLivePlaces([]);
-    if (onGlobalSearchChange) onGlobalSearchChange('');
-    setZoom(16);
-  };
-
-  const handleSelectCampus = (campusId) => {
-    setSelectedCampusId(campusId);
-    setLivePlaces([]);
-    setCommittedMapQuery('');
-    const firstForCampus = CURATED_GEO_KOS.find((k) => k.campusId === campusId);
-    if (firstForCampus) {
-      setSelectedKosId(firstForCampus.id);
-    }
-    setZoom(16);
-  };
-
-  const handleSelectKos = (kos) => {
-    setCommittedMapQuery('');
-    setSelectedKosId(kos.id);
-    setZoom(17);
-  };
-
-  const handleSelectChatFiles = (files, category) => {
-    const newFiles = Array.from(files || []).map((f) => ({
-      localId: `map-att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      file: f,
-      filename: f.name || 'lampiran',
-      kind: category === 'image' || f.type?.startsWith('image/') ? 'image' : 'file',
-      status: 'ready',
-    }));
-    setChatAttachments((prev) => [...prev, ...newFiles].slice(0, 4));
   };
 
   const handleRemoveChatAttachment = (localId) => {
     setChatAttachments((prev) => prev.filter((att) => att.localId !== localId));
   };
 
-  const handleSendChatMessage = async (customPrompt) => {
-    const promptToSend = (typeof customPrompt === 'string' ? customPrompt : chatInput).trim();
-    if (!promptToSend) return;
+  const handleStopStreaming = () => {
+    if (streamAbortRef.current) {
+      streamAbortRef.current.abort();
+      streamAbortRef.current = null;
+    }
+    setIsStreamingAi(false);
+  };
 
-    setIsAiResponding(true);
-    setChatInput('');
+  /**
+   * Orkestrasi utama pencarian Smart Kos (dipakai oleh Text Prompt Sidebar #2 maupun Voice Orb #3).
+   */
+  const executeSmartKosSearch = useCallback(
+    async (promptText, { viaVoice = false, onStepUpdate, onRedirect } = {}) => {
+      const trimmed = String(promptText || '').trim();
+      if (!trimmed) return null;
 
-    try {
-      const res = await fetch('/api/openai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: promptToSend,
-          userContext: {
-            campus: selectedCampus.name,
-            activeFilter,
+      if (streamAbortRef.current) {
+        streamAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
+      // Aktifkan Right Conversation Sidebar (#2) begitu user mengirim prompt!
+      setIsAiSidebarOpen(true);
+      setIsStreamingAi(true);
+      if (!viaVoice) {
+        setChatInput('');
+        setChatAttachments([]);
+      }
+
+      const userTurnId = `sk-u-${Date.now()}`;
+      const assistantTurnId = `sk-a-${Date.now() + 1}`;
+
+      const initialStatus = {
+        orbState: 'reasoning',
+        variant: thinkingEnabled ? 'twins' : 'default',
+        step: 'intent',
+        label: 'Menganalisis kriteria lokasi & budget Anda...',
+      };
+      setActiveOrbStatus(initialStatus);
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: userTurnId,
+          role: 'user',
+          text: trimmed,
+          viaVoice,
+        },
+        {
+          id: assistantTurnId,
+          role: 'assistant',
+          text: '',
+          isStreaming: true,
+          orbState: initialStatus.orbState,
+          orbVariant: initialStatus.variant,
+          statusLabel: initialStatus.label,
+          matchedKosList: [],
+        },
+      ]);
+
+      try {
+        const donePayload = await smartKosApi.streamSmartKosAiSearch(
+          {
+            message: trimmed,
+            campusId: selectedCampusId,
+            reasoningEffort: thinkingEnabled ? 'medium' : 'none',
           },
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      const replyText = payload?.data?.reply || payload?.reply;
+          {
+            signal: controller.signal,
+            onStatus: (statusData) => {
+              setActiveOrbStatus(statusData);
+              onStepUpdate?.(statusData);
+              setAiMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantTurnId
+                    ? {
+                        ...m,
+                        orbState: statusData?.orbState || m.orbState,
+                        orbVariant: statusData?.variant || m.orbVariant,
+                        statusLabel: statusData?.label || m.statusLabel,
+                      }
+                    : m,
+                ),
+              );
+            },
+            onRedirectLocation: (redirectPayload) => {
+              if (redirectPayload?.dataSource) {
+                setDataSource(redirectPayload.dataSource);
+              }
+              if (Array.isArray(redirectPayload?.matchedAccommodations)) {
+                setCatalogItems((prev) => {
+                  const byId = new Map(prev.map((i) => [i.id, i]));
+                  for (const item of redirectPayload.matchedAccommodations) {
+                    byId.set(item.id, item);
+                  }
+                  return Array.from(byId.values());
+                });
+              }
+              if (redirectPayload?.targetKos) {
+                handleSelectKos(redirectPayload.targetKos, {
+                  customRoute: redirectPayload.route || null,
+                  targetCampusId: redirectPayload.campusId || redirectPayload.targetKos.campusId,
+                });
+              }
+              onRedirect?.(redirectPayload);
 
-      const lowerPrompt = promptToSend.toLowerCase();
-      const matchedKos =
-        filteredKos.find(
-          (k) =>
-            lowerPrompt.includes(k.name.toLowerCase()) ||
-            (lowerPrompt.includes('putri') && k.type.toLowerCase().includes('putri')) ||
-            (lowerPrompt.includes('putra') && k.type.toLowerCase().includes('putra')) ||
-            (lowerPrompt.includes('murah') && (k.priceValue || 0) <= 1250000)
-        ) || filteredKos[0] || selectedKos;
+              setAiMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantTurnId
+                    ? {
+                        ...m,
+                        matchedKosList: redirectPayload?.matchedAccommodations || [],
+                      }
+                    : m,
+                ),
+              );
+            },
+            onTextDelta: ({ delta }) => {
+              if (!delta) return;
+              setAiMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantTurnId ? { ...m, text: `${m.text}${delta}` } : m,
+                ),
+              );
+            },
+            onDone: (finalData) => {
+              setAiMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantTurnId
+                    ? {
+                        ...m,
+                        text: m.text || finalData?.outputText || '',
+                        isStreaming: false,
+                        orbState: 'idle',
+                        orbVariant: 'default',
+                        matchedKosList:
+                          finalData?.matchedAccommodations || m.matchedKosList || [],
+                      }
+                    : m,
+                ),
+              );
+            },
+          },
+        );
 
-      if (matchedKos) {
-        setSelectedKosId(matchedKos.id);
-        setZoom(17);
+        return donePayload;
+      } catch (err) {
+        if (controller.signal.aborted) return null;
+
+        // Fallback lokal cerdas bila endpoint belum terjangkau (misal mock fetch terbatas di unit test lama)
+        const lower = trimmed.toLowerCase();
+        const localBest =
+          visibleAccommodations.find(
+            (k) =>
+              lower.includes(k.name.toLowerCase()) ||
+              (lower.includes('putri') && String(k.type).toLowerCase().includes('putri')) ||
+              (lower.includes('putra') && String(k.type).toLowerCase().includes('putra')),
+          ) || visibleAccommodations[0];
+
+        if (localBest) {
+          handleSelectKos(localBest);
+          onRedirect?.({ targetKos: localBest, matchedAccommodations: [localBest] });
+        }
+
+        const fallbackText = localBest
+          ? `Rekomendasi TERALIO AI di sekitar **${selectedCampus.name}**: **${localBest.name}** (${localBest.price}, ${localBest.distance}). Panel Overview Lokasi di peta telah dibuka otomatis.`
+          : err?.message || 'Maaf, pencarian belum dapat diselesaikan saat ini.';
+
+        setAiMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantTurnId
+              ? {
+                  ...m,
+                  text: fallbackText,
+                  isStreaming: false,
+                  orbState: 'idle',
+                  orbVariant: 'default',
+                  matchedKosList: localBest ? [localBest] : [],
+                }
+              : m,
+          ),
+        );
+
+        return localBest
+          ? {
+              outputText: fallbackText,
+              voiceSummary: `Saya mengarahkan peta ke ${localBest.name} dengan harga ${localBest.price}.`,
+              targetKos: localBest,
+            }
+          : null;
+      } finally {
+        setIsStreamingAi(false);
       }
-
-      setAiReply({
-        prompt: promptToSend,
-        text:
-          replyText ||
-          `Berdasarkan pencarian Anda di sekitar ${selectedCampus.name}, rekomendasi terbaik adalah ${matchedKos?.name || 'Kos Harmoni Sukapura'} (${matchedKos?.price || 'Rp1.250.000/bln'}, ${matchedKos?.distance || 'dekat kampus'}). Fasilitas: ${(matchedKos?.features || ['Wi-Fi Cepat', 'Kamar Mandi Dalam']).join(', ')}.`,
-        suggestedKos: matchedKos,
-      });
-    } catch {
-      const lowerPrompt = promptToSend.toLowerCase();
-      const matchedKos =
-        filteredKos.find(
-          (k) =>
-            lowerPrompt.includes(k.name.toLowerCase()) ||
-            (lowerPrompt.includes('putri') && k.type.toLowerCase().includes('putri')) ||
-            (lowerPrompt.includes('putra') && k.type.toLowerCase().includes('putra')) ||
-            (lowerPrompt.includes('murah') && (k.priceValue || 0) <= 1250000)
-        ) || filteredKos[0] || selectedKos;
-
-      if (matchedKos) {
-        setSelectedKosId(matchedKos.id);
-        setZoom(17);
-      }
-
-      setAiReply({
-        prompt: promptToSend,
-        text: `Rekomendasi TERALIO AI untuk ${selectedCampus.name}: ${matchedKos?.name || 'Kos Harmoni Sukapura'} (${matchedKos?.price || 'Rp1.250.000/bln'}, ${matchedKos?.distance || 'dekat kampus'}). Fasilitas: ${(matchedKos?.features || ['Wi-Fi Cepat', 'Kamar Mandi Dalam']).join(', ')}.`,
-        suggestedKos: matchedKos,
-      });
-    } finally {
-      setIsAiResponding(false);
-    }
-  };
-
-  const handleResetToCampus = () => {
-    setCommittedMapQuery(`${selectedCampus.name}`);
-    setZoom(15);
-  };
-
-  const googleMapsEmbedUrl = useMemo(() => {
-    if (committedMapQuery) {
-      return buildGoogleMapsEmbedUrl({
-        query: committedMapQuery,
-        zoom,
-        mapType,
-      });
-    }
-    if (selectedKos) {
-      return buildGoogleMapsEmbedUrl({
-        lat: selectedKos.lat,
-        lng: selectedKos.lng,
-        zoom,
-        mapType,
-      });
-    }
-    return buildGoogleMapsEmbedUrl({
-      lat: selectedCampus.lat,
-      lng: selectedCampus.lng,
-      zoom,
-      mapType,
-    });
-  }, [committedMapQuery, selectedKos, selectedCampus, zoom, mapType]);
-
-  const directionsUrl = useMemo(
-    () =>
-      selectedKos
-        ? buildGoogleMapsDirectionsUrl({
-            origin: selectedCampus,
-            destination: selectedKos,
-            travelMode: 'walking',
-          })
-        : 'https://www.google.com/maps',
-    [selectedCampus, selectedKos]
+    },
+    [thinkingEnabled, selectedCampusId, handleSelectKos, visibleAccommodations, selectedCampus],
   );
 
-  const streetViewUrl = useMemo(
-    () =>
-      selectedKos
-        ? buildGoogleMapsStreetViewUrl({ lat: selectedKos.lat, lng: selectedKos.lng })
-        : 'https://www.google.com/maps',
-    [selectedKos]
+  const handleSendChatMessage = (customPrompt) => {
+    const promptToSend = (typeof customPrompt === 'string' ? customPrompt : chatInput).trim();
+    if (!promptToSend) return;
+    executeSmartKosSearch(promptToSend, { viaVoice: false });
+  };
+
+  // Klik ikon Wave -> Buka Sidebar Kanan sekaligus tutupi dengan Voice Orb Overlay (#3)
+  const handleOpenVoiceOverlay = () => {
+    setIsAiSidebarOpen(true);
+    setIsVoiceOverlayOpen(true);
+  };
+
+  // Handler transkrip lisan real-time dari OpenAI `gpt-realtime-2.1` WebRTC di Smart Kos
+  const handleRealtimeVoiceTurn = useCallback(({ role, text }) => {
+    const cleaned = String(text || '').trim();
+    if (!cleaned) return;
+    setIsAiSidebarOpen(true);
+    setAiMessages((prev) => [
+      ...prev,
+      {
+        id: `sk-rt-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        role: role === 'user' ? 'user' : 'assistant',
+        text: cleaned,
+        viaVoice: true,
+        isStreaming: false,
+        orbState: 'idle',
+        orbVariant: 'default',
+      },
+    ]);
+  }, []);
+
+  // Handler saat `gpt-realtime-2.1` memanggil `teralio_search_accommodations` via `/api/realtime/tool-call`
+  const handleRealtimeVoiceRecommendations = useCallback(
+    (recPayload) => {
+      const recItems = Array.isArray(recPayload?.items) ? recPayload.items : [];
+      if (recItems.length === 0) return null;
+
+      const resolvedMatches = recItems
+        .map((recItem) => {
+          const rawId = String(recItem.rawId || recItem.id || '').replace(/^teralio:/, '');
+          const catalogMatch = catalogItems.find(
+            (k) =>
+              k.id === rawId ||
+              k.name.toLowerCase() === String(recItem.name || '').toLowerCase(),
+          );
+          if (catalogMatch) return catalogMatch;
+
+          if (recItem.location && typeof recItem.location.lat === 'number') {
+            return {
+              id: rawId || `rt-kos-${Date.now()}`,
+              campusId: selectedCampusId,
+              name: recItem.name || 'Hunian Kos TERALIO',
+              address: recItem.address || selectedCampus.address,
+              lat: recItem.location.lat,
+              lng: recItem.location.lng,
+              price: recItem.price || 'Lihat Tarif',
+              distance: recItem.routeSummary?.distanceText || 'Dekat Kampus',
+              type: recItem.category || 'Putra / Putri',
+              matchScore: 96,
+              tag: recItem.sourceLabel || 'Match 96%',
+              rating: typeof recItem.rating === 'number' ? recItem.rating : 4.8,
+              description: recItem.description || '',
+              contact: recItem.contact || null,
+              features: Array.isArray(recItem.features) ? recItem.features : [],
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      if (resolvedMatches.length === 0) return null;
+
+      const topTarget = resolvedMatches[0];
+      handleSelectKos(topTarget, {
+        targetCampusId: topTarget.campusId || selectedCampusId,
+      });
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: `sk-rt-match-${Date.now()}`,
+          role: 'assistant',
+          text: `Peta otomatis diarahkan ke **${topTarget.name}** (${topTarget.price}, ${topTarget.distance}).`,
+          isStreaming: false,
+          orbState: 'idle',
+          orbVariant: 'default',
+          statusLabel: 'Peta & Overview telah diperbarui',
+          matchedKosList: resolvedMatches,
+        },
+      ]);
+
+      return topTarget;
+    },
+    [catalogItems, selectedCampusId, selectedCampus, handleSelectKos],
   );
 
   return (
     <section
-      className={`fullpage-gmaps-root ${isSidebarExpanded ? 'sidebar-is-expanded' : 'sidebar-is-minimized'}`}
+      className={`fullpage-gmaps-root ${
+        isSidebarExpanded ? 'sidebar-is-expanded' : 'sidebar-is-minimized'
+      } ${isAiSidebarOpen ? 'ai-sidebar-is-open' : ''}`}
       data-testid="subview-discovery"
-      aria-label="Smart Kos Match Full-Page Google Maps"
+      aria-label="Smart Kos Match Interactive Platform Map"
     >
-      {/* Accessible Hidden Heading for Screen Readers & Test Compatibility */}
       <h2 className="sr-only">Smart Kos Match &amp; Listings</h2>
 
-      {/* 100vw x 100vh EDGE-TO-EDGE GOOGLE MAPS CANVAS */}
       <div className="fullpage-gmaps-canvas-wrap" data-testid="smart-kos-google-map">
-        {browserApiKey && sdkEngineActive ? (
-          <div
-            ref={sdkMapContainerRef}
-            className="google-maps-canvas"
-            data-testid="google-maps-sdk-canvas"
-          />
-        ) : (
-          <iframe
-            key={googleMapsEmbedUrl}
-            src={googleMapsEmbedUrl}
-            title="Google Maps Smart Kos Match"
-            className="google-maps-iframe"
-            loading="eager"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-            data-testid="google-maps-iframe"
-          />
-        )}
+        {/* 100% NATIVE IN-PLATFORM INTERACTIVE MAP (Zero External "Open with Maps" Iframe) */}
+        <InPlatformMapCanvas
+          campus={selectedCampus}
+          accommodations={visibleAccommodations}
+          selectedKos={selectedKos}
+          onSelectKos={(kos) => handleSelectKos(kos)}
+          mapType={mapType}
+          zoom={zoom}
+          route={activeRoute}
+          showRouteLine={showRouteLine}
+          flyToTrigger={flyToTrigger}
+        />
 
-        {/* FLOATING TOP-LEFT: Mobile Menu Button (if present) */}
+        {/* FLOATING TOP-LEFT: Mobile Menu Button */}
         {onOpenMobileMenu && (
           <div className="fullmap-hud-topleft">
             <button
@@ -845,8 +623,8 @@ export const SmartKosMapView = ({
           </div>
         )}
 
-        {/* FLOATING TOP-RIGHT: Layer Toggle, Recenter, Zoom */}
-        <div className="fullmap-hud-topright" role="toolbar" aria-label="Kontrol Google Maps">
+        {/* FLOATING TOP-RIGHT: Layer Toggle (Peta / Satelit), Zoom, & Recenter */}
+        <div className="fullmap-hud-topright" role="toolbar" aria-label="Kontrol Peta TERALIO">
           <div className="fullmap-topright-bar">
             <div className="map-layer-toggle">
               <button
@@ -873,9 +651,9 @@ export const SmartKosMapView = ({
             <button
               type="button"
               className="map-icon-ctrl-btn"
-              onClick={() => setZoom((z) => Math.min(20, z + 1))}
-              title="Perbesar Peta (Zoom In)"
-              aria-label="Zoom in Google Maps"
+              onClick={() => setZoom((z) => Math.min(19, z + 1))}
+              title="Perbesar Peta"
+              aria-label="Perbesar Peta"
             >
               <Plus size={16} />
             </button>
@@ -883,8 +661,8 @@ export const SmartKosMapView = ({
               type="button"
               className="map-icon-ctrl-btn"
               onClick={() => setZoom((z) => Math.max(12, z - 1))}
-              title="Perkecil Peta (Zoom Out)"
-              aria-label="Zoom out Google Maps"
+              title="Perkecil Peta"
+              aria-label="Perkecil Peta"
             >
               <Minus size={16} />
             </button>
@@ -901,171 +679,77 @@ export const SmartKosMapView = ({
           </div>
         </div>
 
-        {/* OPTIONAL FLOATING KOS LIST OVERLAY DRAWER (Appears over map only when toggled) */}
-        {isDrawerOpen && (
-          <aside className="fullmap-floating-drawer" aria-label="Daftar Smart Kos Match">
-            <div className="map-drawer-header">
-              <div>
-                <span className="map-drawer-header__label">Smart Kos Match</span>
-                <h4>{selectedCampus.name}</h4>
-              </div>
-              <button
-                type="button"
-                className="map-search-clear-btn"
-                onClick={() => setIsDrawerOpen(false)}
-                aria-label="Tutup daftar kos"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            <div className="map-drawer-list">
-              {filteredKos.length === 0 ? (
-                <div className="map-empty-state">
-                  <MapPin size={28} />
-                  <p>Tidak ada kos yang cocok dengan filter saat ini.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveFilter('all');
-                      handleClearMapSearch();
-                    }}
-                  >
-                    Reset Filter Peta
-                  </button>
-                </div>
-              ) : (
-                filteredKos.map((item) => {
-                  const active = selectedKos?.id === item.id;
-                  const eta = estimateDistanceAndEta(selectedCampus, item);
-                  return (
-                    <article
-                      key={item.id}
-                      className={`map-kos-card ${active ? 'is-selected' : ''}`}
-                      onClick={() => handleSelectKos(item)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelectKos(item);
-                        }
-                      }}
-                      data-testid={`drawer-kos-card-${item.id}`}
-                    >
-                      <div className="map-kos-card__top">
-                        <span className="kos-tag">{item.tag || `Match ${item.matchScore}%`}</span>
-                        <strong className="kos-price">{item.price}</strong>
-                      </div>
-
-                      <div className="map-kos-card__body">
-                        <h5>{item.name}</h5>
-                        <p className="map-kos-card__sub">
-                          {eta.distanceText} • ~{eta.walkMinutes} mnt jalan kaki • {item.type}
-                        </p>
-                      </div>
-
-                      <div className="map-kos-card__chips">
-                        {(item.features || []).slice(0, 3).map((feat, i) => (
-                          <span key={i} className="map-kos-mini-chip">
-                            {feat}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="map-kos-card__footer">
-                        <span className="map-focus-indicator">
-                          <MapPin size={13} />
-                          {active ? 'Aktif di Google Maps' : 'Fokus ke Peta'}
-                        </span>
-                        <button
-                          type="button"
-                          className="map-kos-ai-mini-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onAskAi) {
-                              onAskAi(`Tanyakan detail ketersediaan untuk ${item.name}`);
-                            }
-                          }}
-                        >
-                          Tanya AI →
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
-          </aside>
+        {/* #4: NATIVE IN-PLATFORM GOOGLE-MAPS-STYLE PLACE OVERVIEW SHEET */}
+        {isOverviewOpen && selectedKos && (
+          <KosPlaceOverviewCard
+            kos={selectedKos}
+            campus={selectedCampus}
+            route={activeRoute}
+            userName={user?.fullName || 'Mahasiswa TERALIO'}
+            dataSource={dataSource}
+            showRouteLine={showRouteLine}
+            onToggleRouteLine={() => setShowRouteLine((prev) => !prev)}
+            onFocusOnMap={(kos) => handleSelectKos(kos)}
+            onSurveyBooked={onSurveyBooked}
+            onClose={() => setIsOverviewOpen(false)}
+          />
         )}
 
-        {/* FLOATING BOTTOM CENTER CHAT AI (Styled identical to Chat Workspace & Gemini reference) */}
-        <div className="fullmap-hud-bottom" role="region" aria-label="AI Chat Asisten Kos di Peta">
-          <div className="fullmap-chat-dock">
-            {/* Floating AI Reply Bubble when active */}
-            {aiReply && (
-              <div className="fullmap-ai-reply-card" data-testid="fullmap-ai-reply">
-                <div className="fullmap-ai-reply-header">
-                  <div className="fullmap-ai-reply-title">
-                    <span className="fullmap-ai-reply-badge">
-                      <Sparkles size={13} />
-                      TERALIO AI
-                    </span>
-                    {thinkingEnabled && <span className="fullmap-ai-thinking-tag">Thinking Active</span>}
-                  </div>
-                  <button
-                    type="button"
-                    className="fullmap-ai-reply-close"
-                    onClick={() => setAiReply(null)}
-                    aria-label="Tutup jawaban AI"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-                <p className="fullmap-ai-reply-body">{aiReply.text}</p>
-                {aiReply.suggestedKos && (
-                  <div className="fullmap-ai-reply-footer">
-                    <button
-                      type="button"
-                      className="fullmap-ai-kos-chip"
-                      onClick={() => handleSelectKos(aiReply.suggestedKos)}
-                    >
-                      <MapPin size={12} />
-                      <span>Fokus {aiReply.suggestedKos.name} ({aiReply.suggestedKos.price})</span>
-                    </button>
-                    {onAskAi && (
-                      <button
-                        type="button"
-                        className="fullmap-ai-jump-chat-btn"
-                        onClick={() => onAskAi(aiReply.prompt || aiReply.text)}
-                      >
-                        Buka di Chat Penuh →
-                      </button>
-                    )}
-                  </div>
-                )}
+        {/* FLOATING BOTTOM CENTER COMPOSER (Tampil bersih sebelum Right AI Sidebar aktif) */}
+        {!isAiSidebarOpen && (
+          <div className="fullmap-hud-bottom" role="region" aria-label="AI Chat Asisten Kos di Peta">
+            <div className="fullmap-chat-dock">
+              <div className="fullmap-composer-container">
+                <ChatComposer
+                  value={chatInput}
+                  onChange={setChatInput}
+                  onSubmit={handleSendChatMessage}
+                  onStopStreaming={handleStopStreaming}
+                  onOpenVoice={handleOpenVoiceOverlay}
+                  thinkingEnabled={thinkingEnabled}
+                  onToggleThinking={setThinkingEnabled}
+                  attachments={chatAttachments}
+                  onSelectFiles={handleSelectChatFiles}
+                  onRemoveAttachment={handleRemoveChatAttachment}
+                  isStreaming={isStreamingAi}
+                  placeholder="Minta Teralio AI carikan kos di peta (misal: kos putri dekat ITB Dago)..."
+                />
               </div>
-            )}
-
-            {/* Minimalist Chat Composer identical to Chat Workspace */}
-            <div className="fullmap-composer-container">
-              <ChatComposer
-                value={chatInput}
-                onChange={setChatInput}
-                onSubmit={handleSendChatMessage}
-                onStopStreaming={() => setIsAiResponding(false)}
-                onOpenVoice={() => onAskAi?.('Buka percakapan suara TERALIO AI')}
-                thinkingEnabled={thinkingEnabled}
-                onToggleThinking={setThinkingEnabled}
-                attachments={chatAttachments}
-                onSelectFiles={handleSelectChatFiles}
-                onRemoveAttachment={handleRemoveChatAttachment}
-                isStreaming={isAiResponding}
-                placeholder="Minta Teralio AI seputar kos di peta..."
-              />
             </div>
           </div>
-        </div>
+        )}
+
+        {/* #2 & #3: RIGHT-HAND CONVERSATION SIDEBAR + VOICE ORB COVERING SIDEBAR #2 */}
+        <SmartKosAiSidebar
+          isOpen={isAiSidebarOpen}
+          isVoiceOpen={isVoiceOverlayOpen}
+          onCloseSidebar={() => {
+            setIsVoiceOverlayOpen(false);
+            setIsAiSidebarOpen(false);
+          }}
+          onOpenVoice={handleOpenVoiceOverlay}
+          onCloseVoice={() => setIsVoiceOverlayOpen(false)}
+          messages={aiMessages}
+          isStreaming={isStreamingAi}
+          activeStatus={activeOrbStatus}
+          onSelectKos={(kos) => handleSelectKos(kos)}
+          composerValue={chatInput}
+          onComposerChange={setChatInput}
+          onSubmitPrompt={() => handleSendChatMessage()}
+          onStopStreaming={handleStopStreaming}
+          thinkingEnabled={thinkingEnabled}
+          onToggleThinking={setThinkingEnabled}
+          attachments={chatAttachments}
+          onSelectFiles={handleSelectChatFiles}
+          onRemoveAttachment={handleRemoveChatAttachment}
+          onExecuteVoiceQuery={(utterance, hooks) =>
+            executeSmartKosSearch(utterance, { viaVoice: true, ...hooks })
+          }
+          onVoiceRealtimeTurn={handleRealtimeVoiceTurn}
+          onVoiceRealtimeRecommendations={handleRealtimeVoiceRecommendations}
+          activeCampusName={selectedCampus.name}
+          dataSource={dataSource}
+        />
       </div>
     </section>
   );

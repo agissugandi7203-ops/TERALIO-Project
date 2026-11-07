@@ -118,6 +118,8 @@ export function fromSupabaseRow(row) {
 const NORMALIZED_SEED_ITEMS = CURATED_ACCOMMODATIONS.map((item) => fromSupabaseRow(toSupabaseRow(item)));
 
 let missingTableBackoffUntil = 0;
+let missingBookingsBackoffUntil = 0;
+let runtimeBookings = [];
 
 /**
  * Mengekstrak niat pencarian kos berbahasa Indonesia (kampus, area, tipe kos, budget, fasilitas, urutan).
@@ -608,14 +610,16 @@ export const accommodationsService = {
     });
 
     let finalText = grounded.markdown;
+    let aiEngine = 'grounded-database';
+    let streamedFromOpenAi = false;
 
-    if ((isOpenAiConfigured() || hasOpenAiTestOverride()) && primary) {
+    if (((isOpenAiConfigured() && !config.isTest) || hasOpenAiTestOverride()) && primary) {
       try {
         emit('status', {
           orbState: 'working',
           variant: 'default',
           step: 'answering',
-          label: 'Menyusun rekomendasi AI TERALIO...',
+          label: `Menyusun rekomendasi bersama ${config.openai.textModel}...`,
         });
 
         const client = getOpenAiClient();
@@ -631,35 +635,56 @@ export const accommodationsService = {
           contact: k.contact,
         }));
 
-        const aiResp = await client.responses.create({
-          model: config.openai.responsesModel,
-          instructions:
-            'Kamu adalah asisten Smart Kos TERALIO berbahasa Indonesia yang ringkas, hangat, dan akurat. Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
-          input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
-          max_output_tokens: 650,
-        });
+        const stream = await client.responses.create(
+          {
+            model: config.openai.textModel,
+            stream: true,
+            instructions:
+              'Kamu adalah asisten Smart Kos TERALIO berbahasa Indonesia yang ringkas, hangat, dan akurat. Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
+            input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
+            max_output_tokens: 650,
+          },
+          signal ? { signal } : undefined,
+        );
 
-        if (aiResp?.output_text && aiResp.output_text.trim().length > 20) {
-          finalText = aiResp.output_text.trim();
+        if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+          let collected = '';
+          for await (const ev of stream) {
+            if (signal?.aborted) break;
+            if (ev?.type === 'response.output_text.delta' && ev.delta) {
+              collected += ev.delta;
+              emit('text_delta', { delta: ev.delta });
+              streamedFromOpenAi = true;
+            }
+          }
+          if (collected.trim().length > 10) {
+            finalText = collected.trim();
+            aiEngine = `openai:${config.openai.textModel}`;
+          }
+        } else if (stream?.output_text && stream.output_text.trim().length > 10) {
+          finalText = stream.output_text.trim();
+          aiEngine = `openai:${config.openai.textModel}`;
         }
       } catch {
         // Gunakan teks grounded database bila pemanggilan model eksternal terkendala
       }
     }
 
-    // Streamkan per segmen agar animasi teks di Right Conversation Sidebar mengalir halus
-    const tokens = finalText.match(/.{1,36}(\s|$)/gs) || [finalText];
-    for (const chunk of tokens) {
-      if (signal?.aborted) break;
-      emit('text_delta', { delta: chunk });
-      if (paceMs > 0) {
-        await sleep(16, signal);
+    if (!streamedFromOpenAi) {
+      const tokens = finalText.match(/.{1,36}(\s|$)/gs) || [finalText];
+      for (const chunk of tokens) {
+        if (signal?.aborted) break;
+        emit('text_delta', { delta: chunk });
+        if (paceMs > 0) {
+          await sleep(16, signal);
+        }
       }
     }
 
     const responseId = `smartkos_${crypto.randomUUID().slice(0, 12)}`;
     emit('done', {
       responseId,
+      aiEngine,
       outputText: finalText,
       voiceSummary: grounded.voiceSummary,
       campusId: searchResult.campusId,
@@ -710,6 +735,133 @@ export const accommodationsService = {
       insertedOrUpdated: Array.isArray(data) ? data.length : rows.length,
       items: (data || rows).map(fromSupabaseRow),
     };
+  },
+
+  /**
+   * Mengambil daftar jadwal survei kos dari tabel `public.survey_bookings` di Supabase (atau store runtime aktif).
+   */
+  async listSurveyBookings() {
+    if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('survey_bookings')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          if (error.code === 'PGRST205' || /survey_bookings/i.test(error.message || '')) {
+            missingBookingsBackoffUntil = Date.now() + 12_000;
+          }
+          throw error;
+        }
+
+        if (Array.isArray(data)) {
+          return {
+            source: 'supabase',
+            items: data.map((row) => ({
+              id: row.id,
+              accommodationId: row.accommodation_id,
+              accommodationName: row.accommodation_name,
+              campusName: row.campus_name,
+              address: row.address,
+              ownerName: row.owner_name,
+              contactPhone: row.contact_phone,
+              scheduledLabel: row.scheduled_label,
+              scheduledIso: row.scheduled_iso,
+              visitorName: row.visitor_name,
+              status: row.status || 'Terjadwal',
+              createdAt: row.created_at,
+            })),
+          };
+        }
+      } catch {
+        // Lanjut ke runtime store bila tabel belum dieksekusi di SQL Editor
+      }
+    }
+
+    return {
+      source: 'runtime-store',
+      items: [...runtimeBookings],
+    };
+  },
+
+  /**
+   * Membuat jadwal survei kos baru secara dinamis ke Supabase `public.survey_bookings` (dengan sinkronisasi runtime).
+   */
+  async createSurveyBooking(payload = {}) {
+    const kos = payload.accommodationId ? await this.getById(payload.accommodationId) : null;
+    const id = `srv_${crypto.randomUUID().slice(0, 10)}`;
+    const nowIso = new Date().toISOString();
+
+    const record = {
+      id,
+      accommodationId: String(payload.accommodationId || kos?.id || 'kos-custom'),
+      accommodationName: String(payload.accommodationName || kos?.name || 'Hunian Kos TERALIO'),
+      campusName: String(payload.campusName || kos?.campusName || ''),
+      address: String(payload.address || kos?.address || ''),
+      ownerName: String(payload.ownerName || kos?.contact?.ownerName || 'Pengelola Kos'),
+      contactPhone: String(payload.contactPhone || kos?.contact?.phone || ''),
+      scheduledLabel: String(payload.scheduledLabel || 'Besok • 10:00 WIB'),
+      scheduledIso: payload.scheduledIso ? String(payload.scheduledIso) : null,
+      visitorName: String(payload.visitorName || 'Mahasiswa TERALIO'),
+      status: 'Terjadwal',
+      createdAt: nowIso,
+    };
+
+    if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('survey_bookings')
+          .insert([
+            {
+              id: record.id,
+              accommodation_id: record.accommodationId,
+              accommodation_name: record.accommodationName,
+              campus_name: record.campusName,
+              address: record.address,
+              owner_name: record.ownerName,
+              contact_phone: record.contactPhone,
+              scheduled_label: record.scheduledLabel,
+              scheduled_iso: record.scheduledIso,
+              visitor_name: record.visitorName,
+              status: record.status,
+            },
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === 'PGRST205' || /survey_bookings/i.test(error.message || '')) {
+            missingBookingsBackoffUntil = Date.now() + 12_000;
+          }
+          throw error;
+        }
+
+        if (data) {
+          return {
+            source: 'supabase',
+            booking: {
+              ...record,
+              createdAt: data.created_at || nowIso,
+            },
+          };
+        }
+      } catch {
+        // Simpan ke runtime store agar alur jadwal survei tidak gagal
+      }
+    }
+
+    runtimeBookings = [record, ...runtimeBookings].slice(0, 50);
+    return {
+      source: 'runtime-store',
+      booking: record,
+    };
+  },
+
+  _resetRuntimeBookingsForTesting() {
+    runtimeBookings = [];
   },
 };
 

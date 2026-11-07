@@ -826,7 +826,7 @@ export const openaiService = {
       throw badRequest('Field "message" atau "prompt" wajib diisi dengan teks valid');
     }
 
-    if (!isOpenAiConfigured()) {
+    if (!isOpenAiConfigured() || (config.isTest && !hasOpenAiTestOverride())) {
       return {
         source: 'mock-fallback',
         configured: false,

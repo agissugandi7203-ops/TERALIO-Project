@@ -186,7 +186,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
           </div>
         )}
 
-        {/* Indikator Thinking Orb sinkron dengan aktivitas aktual AI */}
+        {/* Indikator Thinking Orb sinkron dengan aktivitas aktual AI (bubble murni tanpa teks bertumpuk) */}
         {showOrb && (
           <div className="chat-turn__status-row">
             <ThinkingOrbStage
@@ -194,7 +194,8 @@ const ChatMessageItem = memo(function ChatMessageItem({
               state={message.orbState}
               variant={message.orbVariant || 'default'}
               size={20}
-              label={message.statusLabel || 'Memproses...'}
+              paused={false}
+              showLabel={false}
             />
           </div>
         )}

@@ -7,8 +7,8 @@ const INITIAL_VOICE_STATE = {
   orbState: 'idle',
   variant: 'default',
   speed: 1,
-  paused: true,
-  label: 'Siap memulai percakapan suara',
+  paused: false,
+  label: '',
 };
 
 export function FullscreenVoiceOverlay({
@@ -184,7 +184,7 @@ export function FullscreenVoiceOverlay({
         </button>
       </div>
 
-      {/* Center Stage: Thinking Orbs sebagai pusat visual tunggal */}
+      {/* Center Stage: Thinking Orbs sebagai pusat visual tunggal (animasi muter saat idle, tanpa backdrop biru) */}
       <div className="voice-fullscreen__center">
         <ThinkingOrbStage
           ref={heroStageRef}
@@ -193,12 +193,13 @@ export function FullscreenVoiceOverlay({
           variant={voiceState.variant}
           phase={voiceState.phase}
           speed={voiceState.speed}
-          paused={voiceState.paused}
+          paused={false}
           size={184}
           label={voiceState.label}
+          showLabel={false}
         />
 
-        <p className="voice-fullscreen__status" data-testid="voice-status-label">
+        <p className="voice-fullscreen__status sr-only" data-testid="voice-status-label">
           {voiceState.label}
         </p>
 

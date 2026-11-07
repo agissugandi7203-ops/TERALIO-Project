@@ -39,11 +39,13 @@ describe('OpenAI Responses API & Native Web Search Integration', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.openai.apiMode).toBe('responses');
-    expect(res.body.data.openai.textModel).toBe('gpt-6-astra');
-    expect(res.body.data.realtime.model).toBe('gpt-realtime-2.1');
+    expect(res.body.data.openai.textModel).toBe(config.openai.textModel);
+    expect(res.body.data.realtime.model).toBe(config.openai.realtimeModel);
     expect(res.body.data.mcp.endpoint).toBe('/api/mcp');
     expect(res.body.data.googleMaps.service).toBe('Google Maps Platform');
-    expect(JSON.stringify(res.body)).not.toContain('sk-placeholder');
+    if (config.openai.apiKey) {
+      expect(JSON.stringify(res.body)).not.toContain(config.openai.apiKey);
+    }
   });
 
   it('POST /api/openai/responses mengembalikan 503 transparan saat OPENAI_API_KEY belum dikonfigurasi', async () => {

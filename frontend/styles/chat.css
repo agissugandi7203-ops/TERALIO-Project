@@ -855,7 +855,7 @@
   color: #475569;
 }
 
-/* Hero Orb Stage for Fullscreen Voice */
+/* Hero Orb Stage for Fullscreen Voice (Animasi muter terus saat idle & bernapas halus) */
 .thinking-orb-hero {
   --mic-level: 0;
   --ai-audio-level: 0;
@@ -866,48 +866,33 @@
   align-items: center;
   justify-content: center;
   color: #1d4ed8;
+  animation: orbHeroFloat 4.2s ease-in-out infinite;
 }
 
+@keyframes orbHeroFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+/* Hilangkan backdrop & halo biru sesuai permintaan */
 .thinking-orb-hero__ambient {
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(59, 130, 246, 0.2) 0%,
-    rgba(147, 197, 253, 0.12) 48%,
-    rgba(255, 255, 255, 0) 74%
-  );
-  transform: scale(calc(1 + var(--mic-level) * 0.28 + var(--ai-audio-level) * 0.34));
-  transition: transform 0.09s linear, opacity 0.28s ease;
-  pointer-events: none;
+  display: none !important;
 }
 
 .thinking-orb-hero__halo {
-  position: absolute;
-  inset: 16px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(59, 130, 246, 0.18);
-  background: radial-gradient(circle, rgba(239, 246, 255, 0.86) 0%, rgba(255, 255, 255, 0.35) 100%);
-  transform: scale(calc(1 + var(--mic-level) * 0.16 + var(--ai-audio-level) * 0.22));
-  transition: transform 0.08s linear, border-color 0.25s ease;
-  pointer-events: none;
+  display: none !important;
 }
 
 .thinking-orb-hero.phase-user_speaking {
   color: #0284c7;
 }
 
-.thinking-orb-hero.phase-user_speaking .thinking-orb-hero__halo {
-  border-color: rgba(14, 165, 233, 0.42);
-}
-
 .thinking-orb-hero.phase-ai_speaking {
   color: #1d4ed8;
-}
-
-.thinking-orb-hero.phase-ai_speaking .thinking-orb-hero__halo {
-  border-color: rgba(37, 99, 235, 0.45);
 }
 
 .thinking-orb-hero.phase-retrying {
@@ -920,6 +905,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: orbContinuousSpin 14s linear infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+@keyframes orbContinuousSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -1203,20 +1200,29 @@
 }
 
 /* --------------------------------------------------------------------------
-   Fullscreen Voice Conversation (Covers Entire Dashboard Behind It)
+   Fullscreen Voice Conversation (Terkurung rapi di dalam Chat Workspace, tidak menabrak sidebar)
    -------------------------------------------------------------------------- */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .voice-fullscreen-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  z-index: 120;
-  background: radial-gradient(
-    circle at 50% 44%,
-    #e8f3ff 0%,
-    #f6faff 48%,
-    #ffffff 100%
-  );
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  background: #ffffff;
+  border-radius: 30px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

@@ -55,6 +55,38 @@ TO service_role
 USING (true)
 WITH CHECK (true);
 
+-- ============================================================================
+-- TABEL JADWAL SURVEI KOS DINAMIS (public.survey_bookings)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.survey_bookings (
+    id TEXT PRIMARY KEY,
+    accommodation_id TEXT NOT NULL,
+    accommodation_name TEXT NOT NULL,
+    campus_name TEXT,
+    address TEXT,
+    owner_name TEXT,
+    contact_phone TEXT,
+    scheduled_label TEXT NOT NULL,
+    scheduled_iso DATE,
+    visitor_name TEXT DEFAULT 'Mahasiswa TERALIO',
+    status TEXT DEFAULT 'Terjadwal',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.survey_bookings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read survey_bookings" ON public.survey_bookings;
+CREATE POLICY "Allow public read survey_bookings"
+ON public.survey_bookings FOR SELECT
+TO anon, authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert survey_bookings" ON public.survey_bookings;
+CREATE POLICY "Allow public insert survey_bookings"
+ON public.survey_bookings FOR INSERT
+TO anon, authenticated, service_role
+WITH CHECK (true);
+
 -- Setelah menjalankan SQL ini, jalankan:
 --   npm run seed:supabase
 -- untuk mengisi otomatis seluruh 12 data kos terkurasi ke Supabase Anda!

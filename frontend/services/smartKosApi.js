@@ -49,6 +49,37 @@ export const smartKosApi = {
   },
 
   /**
+   * Mengambil daftar jadwal survei kos dinamis (`/api/accommodations/bookings`).
+   */
+  async fetchSurveyBookings({ signal } = {}) {
+    const res = await fetch('/api/accommodations/bookings', {
+      method: 'GET',
+      headers: buildAuthHeaders(),
+      signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.success) return [];
+    return Array.isArray(payload.data) ? payload.data : [];
+  },
+
+  /**
+   * Menyimpan jadwal survei kos baru secara dinamis ke backend/Supabase (`/api/accommodations/bookings`).
+   */
+  async createSurveyBooking(bookingPayload, { signal } = {}) {
+    const res = await fetch('/api/accommodations/bookings', {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(bookingPayload),
+      signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Gagal menyimpan jadwal survei kos.');
+    }
+    return payload.data;
+  },
+
+  /**
    * Streaming SSE pencarian AI & Voice Smart Kos (`/api/accommodations/ai-search/stream`):
    * menerima event `status` -> `redirect_location` -> `recommendations` -> `text_delta` -> `done`.
    */
@@ -148,11 +179,13 @@ export const smartKosApi = {
           // ignore lock release errors
         }
       }
-    } else {
+    } else if (typeof res.text === 'function') {
       const fullText = (await res.text()).replace(/\r\n/g, '\n');
       for (const frame of fullText.split('\n\n')) {
         dispatchFrame(parseSseBlock(frame));
       }
+    } else {
+      throw new Error('Respons SSE tidak valid pada lingkungan ini.');
     }
 
     if (streamError) throw streamError;

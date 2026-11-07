@@ -8,6 +8,7 @@ import BudgetMeterCard from '../components/BudgetMeterCard.jsx';
 import ProximityWaveCard from '../components/ProximityWaveCard.jsx';
 import SmartKosMapView from '../components/SmartKosMapView.jsx';
 import ChatWorkspace from '../components/chat/ChatWorkspace.jsx';
+import { smartKosApi } from '../services/smartKosApi.js';
 import { fireConfetti } from '../utils/confetti.js';
 import '../styles/dashboard.css';
 
@@ -59,6 +60,8 @@ export const DashboardPage = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingChatPrompt, setPendingChatPrompt] = useState('');
   const [openVoiceSignal, setOpenVoiceSignal] = useState(0);
+  const [smartKosFocusTarget, setSmartKosFocusTarget] = useState(null);
+  const [surveyBookings, setSurveyBookings] = useState([]);
   const [backendItems, setBackendItems] = useState([]);
   const [backendHealth, setBackendHealth] = useState(null);
 
@@ -107,6 +110,15 @@ export const DashboardPage = ({
       .then((payload) => {
         if (isMounted && payload) {
           setBackendHealth(payload);
+        }
+      })
+      .catch(() => {});
+
+    smartKosApi
+      .fetchSurveyBookings()
+      .then((bookings) => {
+        if (isMounted && Array.isArray(bookings)) {
+          setSurveyBookings(bookings);
         }
       })
       .catch(() => {});
@@ -271,9 +283,10 @@ export const DashboardPage = ({
           </>
         )}
 
-        {/* 4. Smart Kos Match — 100% Full-Page Interactive Google Maps View */}
+        {/* 4. Smart Kos Match — 100% Full-Page Interactive Platform Map View */}
         {activeNav === 'discovery' && (
           <SmartKosMapView
+            user={profileUser}
             externalListings={backendItems}
             globalSearchQuery={searchQuery}
             onGlobalSearchChange={setSearchQuery}
@@ -281,6 +294,11 @@ export const DashboardPage = ({
             onOpenMobileMenu={() => setMobileMenuOpen(true)}
             onBackToOverview={() => setActiveNav('home')}
             onAskAi={(promptText) => handleOpenChat(promptText)}
+            focusTarget={smartKosFocusTarget}
+            onConsumeFocusTarget={() => setSmartKosFocusTarget(null)}
+            onSurveyBooked={(newBooking) =>
+              setSurveyBookings((prev) => [newBooking, ...prev.filter((b) => b.id !== newBooking.id)])
+            }
           />
         )}
 
@@ -292,6 +310,10 @@ export const DashboardPage = ({
             pendingPrompt={pendingChatPrompt}
             onConsumePendingPrompt={() => setPendingChatPrompt('')}
             openVoiceSignal={openVoiceSignal}
+            onOpenInSmartKos={(placeItem) => {
+              setSmartKosFocusTarget(placeItem);
+              setActiveNav('discovery');
+            }}
           />
         )}
 
@@ -336,16 +358,43 @@ export const DashboardPage = ({
               </button>
             </div>
 
-            {/* Schedule View */}
+            {/* Schedule View — Dinamis dari jadwal survei kos yang dibuat pengguna */}
             {activeNav === 'schedule' && (
               <div style={{ padding: '1rem', color: '#475569', fontSize: '0.9rem' }}>
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
-                  <strong>Jadwal Kunjungan: Kos Harmoni Sukapura</strong>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
-                    Sabtu, 14:00 WIB • Bertemu dengan Ibu Kos (Bapak Herman) • Radius 650m
+                {surveyBookings.length === 0 ? (
+                  <p>
+                    Belum ada jadwal survei kos aktif. Buka menu <strong>Smart Kos Match</strong>, pilih atau cari kos via AI/Voice, lalu klik tombol <strong>Survei Kos</strong> pada panel Overview untuk menjadwalkan kunjungan.
                   </p>
-                </div>
-                <p>Belum ada jadwal survei lainnya. Klik &quot;Explore Now&quot; di Home untuk membuat jadwal baru melalui AI.</p>
+                ) : (
+                  surveyBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      style={{
+                        background: '#f8fafc',
+                        padding: '1.15rem 1.25rem',
+                        borderRadius: '16px',
+                        border: '1px solid #e2e8f0',
+                        marginBottom: '0.85rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <strong>Jadwal Kunjungan: {booking.accommodationName}</strong>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '0.2rem 0.65rem', borderRadius: '999px' }}>
+                          ✓ {booking.status || 'Terjadwal'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.82rem', color: '#334155', marginTop: '4px' }}>
+                        {booking.scheduledLabel} • Pengelola: {booking.ownerName || 'Pengelola Kos'}
+                        {booking.contactPhone ? ` (${booking.contactPhone})` : ''}
+                      </p>
+                      {booking.address && (
+                        <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          📍 {booking.address}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             )}
 

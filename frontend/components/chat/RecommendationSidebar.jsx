@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import InPlatformMapCanvas from '../map/InPlatformMapCanvas.jsx';
+import '../../styles/smart-kos.css';
 
 function normalizePhoneHref(phone) {
   if (!phone) return null;
@@ -10,9 +12,25 @@ export function RecommendationSidebar({
   isOpen = false,
   items = [],
   queryContext = null,
+  onOpenInSmartKos,
   onClose,
 }) {
   const [expandedMapId, setExpandedMapId] = useState(null);
+
+  // Otomatis tampilkan pratinjau peta in-platform pada rekomendasi teratas yang memiliki koordinat
+  useEffect(() => {
+    if (isOpen && Array.isArray(items) && items.length > 0) {
+      const firstWithCoords = items.find(
+        (it) =>
+          it?.location &&
+          typeof it.location.lat === 'number' &&
+          typeof it.location.lng === 'number',
+      );
+      if (firstWithCoords) {
+        setExpandedMapId(firstWithCoords.id);
+      }
+    }
+  }, [isOpen, items]);
 
   if (!isOpen || !Array.isArray(items) || items.length === 0) {
     return null;
@@ -181,19 +199,25 @@ export function RecommendationSidebar({
                 </div>
               )}
 
-              {/* Pratinjau Peta Koordinat & Tautan Peta */}
+              {/* Pratinjau Peta In-Platform TERALIO (Tanpa Iframe "Open with Maps") */}
               {isMapExpanded && hasCoords && (
                 <div className="rec-place-card__map-preview">
-                  <iframe
-                    title={`Peta lokasi ${item.name}`}
-                    src={`https://maps.google.com/maps?q=${item.location.lat},${item.location.lng}&z=16&output=embed`}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
+                  <InPlatformMapCanvas
+                    mini
+                    mapType="satellite"
+                    zoom={17}
+                    selectedKos={{
+                      id: item.id,
+                      name: item.name,
+                      lat: item.location.lat,
+                      lng: item.location.lng,
+                      price: item.price || item.name,
+                    }}
                   />
                 </div>
               )}
 
-              {(hasCoords || item.mapUrl) && (
+              {(hasCoords || item.mapUrl || onOpenInSmartKos) && (
                 <div className="rec-place-card__actions">
                   {hasCoords && (
                     <button
@@ -204,11 +228,22 @@ export function RecommendationSidebar({
                       }
                       data-testid={`toggle-map-preview-${item.id}`}
                     >
-                      {isMapExpanded ? 'Tutup Pratinjau Peta' : 'Pratinjau Peta'}
+                      {isMapExpanded ? 'Tutup Peta Mini' : 'Peta Mini'}
                     </button>
                   )}
 
-                  {item.mapUrl && (
+                  {onOpenInSmartKos && hasCoords && (
+                    <button
+                      type="button"
+                      className="rec-place-card__btn-primary"
+                      onClick={() => onOpenInSmartKos(item)}
+                      data-testid={`open-inplatform-overview-${item.id}`}
+                    >
+                      <span>Overview di Smart Kos</span>
+                    </button>
+                  )}
+
+                  {item.mapUrl && !onOpenInSmartKos && (
                     <a
                       href={item.mapUrl}
                       target="_blank"

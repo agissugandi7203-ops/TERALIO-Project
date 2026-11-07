@@ -80,7 +80,7 @@ export const ThinkingOrbStage = forwardRef(function ThinkingOrbStage(
             variant={resolved.variant}
             size={resolvedSize}
             speed={speed}
-            paused={paused}
+            paused={false}
             label={label || `AI ${resolved.state}`}
             className="thinking-orb-hero__svg"
           />

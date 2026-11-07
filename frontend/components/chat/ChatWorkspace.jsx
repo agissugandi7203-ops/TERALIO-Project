@@ -16,6 +16,7 @@ export function ChatWorkspace({
   pendingPrompt = '',
   onConsumePendingPrompt,
   openVoiceSignal = 0,
+  onOpenInSmartKos,
 }) {
   const [messages, setMessages] = useState([]);
   const [composerText, setComposerText] = useState('');
@@ -583,6 +584,7 @@ export function ChatWorkspace({
         isOpen={isRecSidebarOpen && hasSavedRecommendations}
         items={recommendations}
         queryContext={recommendationQuery}
+        onOpenInSmartKos={onOpenInSmartKos}
         onClose={() => setIsRecSidebarOpen(false)}
       />
 
