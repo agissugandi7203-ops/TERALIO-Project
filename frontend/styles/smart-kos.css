@@ -22,21 +22,6 @@
 .teralio-inplatform-map-leaflet {
   width: 100%;
   height: 100%;
-  -webkit-font-smoothing: subpixel-antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Sharp high-DPI tile rendering without GPU blur or subpixel fuzziness */
-.teralio-inplatform-map-leaflet .leaflet-tile {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform-style: flat;
-}
-
-.teralio-inplatform-map-leaflet .leaflet-tile-container {
-  contain: layout paint;
 }
 
 /* Custom Leaflet DivIcon Reset */
