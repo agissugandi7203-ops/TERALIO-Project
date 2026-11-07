@@ -40,7 +40,7 @@ export function PricingSection({ onAction }) {
               letterSpacing: '0.04em',
             }}
           >
-            Teralio Service Plans
+            Skema Layanan Teralio
           </span>
 
           {/* Heading */}
@@ -50,7 +50,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#ffffff' : '#111827',
             }}
           >
-            Transparent for Students, Efficient for Property Owners
+            Transparan untuk Mahasiswa, Efisien untuk Pemilik Kos
           </h2>
 
           <p
@@ -59,7 +59,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#94a3b8' : '#64748b',
             }}
           >
-            100% free accommodation discovery for students. Direct-to-owner listings with zero middleman commissions for landlords.
+            Pencarian hunian gratis selamanya bagi mahasiswa. Pemasaran langsung tanpa potongan komisi perantara bagi pemilik properti.
           </p>
 
           {/* Billing Toggle: Monthly vs Yearly */}
@@ -89,7 +89,7 @@ export function PricingSection({ onAction }) {
                 boxShadow: !isYearly ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
               }}
             >
-              Monthly
+              Bulanan
             </button>
 
             <button
@@ -112,9 +112,9 @@ export function PricingSection({ onAction }) {
                 boxShadow: isYearly ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
               }}
             >
-              <span>Yearly</span>
+              <span>Tahunan</span>
               <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-500 text-white tracking-wide">
-                Save 20%
+                Hemat 20%
               </span>
             </button>
           </div>
@@ -139,14 +139,14 @@ export function PricingSection({ onAction }) {
                   className="text-xl sm:text-2xl font-bold"
                   style={{ color: isNight ? '#ffffff' : '#111827' }}
                 >
-                  Students &amp; Seekers
+                  Mahasiswa &amp; Pencari Kos
                 </h3>
               </div>
               <p
                 className="text-sm mb-6"
                 style={{ color: isNight ? '#94a3b8' : '#64748b' }}
               >
-                Free forever for university students and local room seekers
+                Gratis selamanya untuk seluruh mahasiswa perantau &amp; pencari hunian lokal
               </p>
 
               {/* Price */}
@@ -161,7 +161,7 @@ export function PricingSection({ onAction }) {
                   className="text-sm font-medium"
                   style={{ color: isNight ? '#94a3b8' : '#64748b' }}
                 >
-                  /forever
+                  /selamanya
                 </span>
               </div>
 
@@ -175,18 +175,18 @@ export function PricingSection({ onAction }) {
                   color: '#ffffff',
                 }}
               >
-                Start Searching for Free
+                Mulai Cari Kos Gratis
               </button>
 
               {/* Feature Checklist */}
               <div className="space-y-3.5">
                 {[
-                  'Conversational AI assistant in natural language (text & voice)',
-                  'Curated catalog of 46 verified accommodations in Bandung, Depok & Yogya',
-                  'Total living cost estimates (base rent + monthly utilities)',
-                  'Google Maps & OSRM walking routes to university campus gates',
-                  'Direct WhatsApp contact with property owners (zero middleman)',
-                  'Schedule physical survey visits directly to your calendar',
+                  'Pencarian asisten AI bahasa sehari-hari (teks & suara)',
+                  'Katalog 46 properti terkurasi di Bandung, Depok & Yogya',
+                  'Estimasi total biaya tinggal (sewa pokok + utilitas bulanan)',
+                  'Rute jalan kaki Google Maps & OSRM ke gerbang kampus',
+                  'Kontak langsung pemilik via WhatsApp (tanpa makelar)',
+                  'Jadwalkan survei kunjungan fisik ke kalender survei',
                 ].map((feat, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <div
@@ -229,40 +229,40 @@ export function PricingSection({ onAction }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  Property Owners (Direct-to-Owner)
+                  Pemilik Kos (Direct-to-Owner)
                 </h3>
                 <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-sm">
                   <Sparkles className="w-3 h-3" />
-                  Verified Partner
+                  Mitra Terverifikasi
                 </span>
               </div>
 
               <p className="text-sm mb-6 text-slate-300">
-                Direct marketing to students with zero broker cuts or commissions
+                Pemasaran langsung ke calon penyewa tanpa potongan biaya makelar
               </p>
 
               {/* Price */}
               <div className="flex items-baseline gap-1.5 mb-3">
                 <span className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white transition-all duration-300">
-                  {isYearly ? 'Rp39K' : 'Rp49K'}
+                  {isYearly ? 'Rp39 Rb' : 'Rp49 Rb'}
                 </span>
                 <span className="text-sm font-medium text-slate-400">
-                  /property/mo
+                  /properti/bln
                 </span>
                 {isYearly && (
                   <span className="ml-2 text-xs font-semibold text-emerald-400">
-                    (billed yearly)
+                    (ditagih tahunan)
                   </span>
                 )}
               </div>
 
               {/* Guarantee badges */}
               <div className="flex items-center flex-wrap gap-2 text-[11px] font-medium text-slate-400 mb-8">
-                <span>0% Broker Commission</span>
+                <span>0% Komisi Makelar</span>
                 <span>•</span>
-                <span>Direct WhatsApp Contact</span>
+                <span>Kontak Langsung WhatsApp</span>
                 <span>•</span>
-                <span>Google Maps Pin Placement</span>
+                <span>Titik Peta Google Maps</span>
               </div>
 
               {/* CTA Button */}
@@ -271,18 +271,18 @@ export function PricingSection({ onAction }) {
                 onClick={handleAction}
                 className="w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all duration-200 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] cursor-pointer mb-8 bg-white text-slate-900 shadow-lg"
               >
-                List Your Property
+                Daftarkan Properti Anda
               </button>
 
               {/* Feature Checklist */}
               <div className="space-y-3.5">
                 {[
-                  'Verified property listing with genuine GPS coordinates',
-                  '100% free of middleman commissions per lease agreement',
-                  'Direct WhatsApp integration connected to student seekers',
-                  'Visit schedule reservation calendar management',
-                  'Priority recommendations in AI assistant conversations',
-                  'Verified property badge & tenant interest analytics',
+                  'Listing hunian terverifikasi dengan titik koordinat riil',
+                  '100% bebas biaya komisi makelar per transaksi sewa',
+                  'Integrasi nomor WhatsApp langsung ke calon penyewa',
+                  'Manajemen kalender reservasi survei kunjungan kos',
+                  'Prioritas rekomendasi pada percakapan asisten AI',
+                  'Lencana properti terverifikasi & statistik minat',
                 ].map((feat, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-500/20 text-cyan-400">
@@ -311,13 +311,13 @@ export function PricingSection({ onAction }) {
               className="text-lg sm:text-xl font-bold mb-1.5"
               style={{ color: isNight ? '#ffffff' : '#111827' }}
             >
-              Campus &amp; Housing Management Partnerships
+              Kemitraan Kampus &amp; Pengelola Hunian
             </h4>
             <p
               className="text-sm font-normal"
               style={{ color: isNight ? '#94a3b8' : '#64748b' }}
             >
-              Official living curation programs for universities to streamline onboarding for new and exchange students.
+              Program kurasi tempat tinggal resmi bagi universitas untuk mempermudah akomodasi mahasiswa baru dan pertukaran pelajar.
             </p>
           </div>
 
@@ -331,7 +331,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#ffffff' : '#0f172a',
             }}
           >
-            Contact Teralio Team
+            Hubungi Tim Teralio
           </button>
         </div>
       </div>
