@@ -74,6 +74,8 @@ router.get('/supabase-status', itemsController.getSupabaseStatus);
 router.post('/auth/register', noStore, authController.register);
 router.post('/auth/login', noStore, authController.login);
 router.get('/auth/google', noStore, authController.getGoogleAuth);
+router.get('/auth/github', noStore, authController.getGithubAuth);
+router.get('/auth/oauth/:provider', noStore, authController.getOAuth);
 router.post('/auth/forgot-password', noStore, authController.forgotPassword);
 router.post('/auth/reset-password', noStore, authController.resetPassword);
 router.get('/auth/me', noStore, authController.getMe);
