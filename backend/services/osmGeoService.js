@@ -73,22 +73,31 @@ export function estimateHaversineRoute(origin, destination) {
   };
 }
 
+const routeCache = new Map();
+
 export async function computeCampusRoute(
   origin,
   destination,
-  { mode = 'foot', fetchImpl = globalThis.fetch, timeoutMs = 2200 } = {},
+  { mode = 'foot', fetchImpl = globalThis.fetch, timeoutMs = 300 } = {},
 ) {
   const fallback = estimateHaversineRoute(origin, destination);
   if (!isValidPoint(origin) || !isValidPoint(destination)) {
     return fallback;
   }
 
+  const cacheKey = `${origin.lat.toFixed(4)},${origin.lng.toFixed(4)}:${destination.lat.toFixed(4)},${destination.lng.toFixed(4)}:${mode}`;
+  if (routeCache.has(cacheKey)) {
+    return routeCache.get(cacheKey);
+  }
+
   // Hindari panggilan jaringan publik saat unit test kecuali fetch di-mock eksplisit
   if ((process.env.NODE_ENV === 'test' || process.env.VITEST) && fetchImpl === globalThis.fetch) {
+    routeCache.set(cacheKey, fallback);
     return fallback;
   }
 
   if (typeof fetchImpl !== 'function') {
+    routeCache.set(cacheKey, fallback);
     return fallback;
   }
 
@@ -104,12 +113,16 @@ export async function computeCampusRoute(
       headers: { Accept: 'application/json' },
       signal: controller.signal,
     });
-    if (!response.ok) return fallback;
+    if (!response.ok) {
+      routeCache.set(cacheKey, fallback);
+      return fallback;
+    }
 
     const payload = await response.json();
     const first = Array.isArray(payload?.routes) ? payload.routes[0] : null;
     const rawCoords = first?.geometry?.coordinates;
     if (!first || !Array.isArray(rawCoords) || rawCoords.length < 2) {
+      routeCache.set(cacheKey, fallback);
       return fallback;
     }
 
@@ -123,7 +136,7 @@ export async function computeCampusRoute(
       .filter((pair) => Array.isArray(pair) && pair.length >= 2)
       .map(([lng, lat]) => [Number(lat), Number(lng)]);
 
-    return {
+    const result = {
       distanceMeters,
       distanceText,
       walkMinutes,
@@ -132,7 +145,10 @@ export async function computeCampusRoute(
       geometry: geometry.length >= 2 ? geometry : fallback.geometry,
       source: 'osrm-open-routing',
     };
+    routeCache.set(cacheKey, result);
+    return result;
   } catch {
+    routeCache.set(cacheKey, fallback);
     return fallback;
   } finally {
     clearTimeout(timer);

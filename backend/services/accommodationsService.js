@@ -403,6 +403,58 @@ function parseMetersFromDistanceLabel(distanceStr) {
   return 750;
 }
 
+export function calculateStudentBudgetBreakdown(kosItem) {
+  if (!kosItem || typeof kosItem !== 'object') {
+    return {
+      baseRent: 1150000,
+      utilityAmount: 150000,
+      totalMonthly: 1300000,
+      isAllInclusive: false,
+      formattedBase: 'Rp1.150.000',
+      formattedUtility: 'Rp150.000',
+      formattedTotal: 'Rp1.300.000/bulan',
+      breakdownFormula: 'Sewa Rp1.150.000 + utilitas Rp150.000 menghasilkan total Rp1.300.000/bulan',
+    };
+  }
+
+  const baseRent = Number(kosItem.priceMonthly ?? kosItem.priceValue ?? 1150000);
+  const features = Array.isArray(kosItem.features) ? kosItem.features : [];
+  const desc = String(kosItem.description || '').toLowerCase();
+
+  const isAllInclusive =
+    features.some((f) => /all-?in|listrik\s*termasuk/i.test(f)) &&
+    !features.some((f) => /token|listrik\s*sendiri/i.test(f));
+
+  // Estimasi utilitas bulanan mahasiswa (token listrik mandiri pemakaian laptop/kipas/AC, air, dan iuran sampah)
+  const utilityAmount =
+    typeof kosItem.utilityMonthly === 'number'
+      ? kosItem.utilityMonthly
+      : isAllInclusive
+        ? 0
+        : 150000;
+
+  const totalMonthly = baseRent + utilityAmount;
+
+  const formattedBase = `Rp${baseRent.toLocaleString('id-ID')}`;
+  const formattedUtility = `Rp${utilityAmount.toLocaleString('id-ID')}`;
+  const formattedTotal = `Rp${totalMonthly.toLocaleString('id-ID')}/bulan`;
+
+  const breakdownFormula = isAllInclusive
+    ? `Sewa ${formattedBase} (utilitas listrik & air sudah termasuk)`
+    : `Sewa ${formattedBase} + utilitas ${formattedUtility} menghasilkan total ${formattedTotal}`;
+
+  return {
+    baseRent,
+    utilityAmount,
+    totalMonthly,
+    isAllInclusive,
+    formattedBase,
+    formattedUtility,
+    formattedTotal,
+    breakdownFormula,
+  };
+}
+
 export const accommodationsService = {
   /**
    * Mengambil seluruh data kos dari tabel `public.accommodations` di Supabase,
@@ -617,9 +669,13 @@ export const accommodationsService = {
     };
   },
 
+  calculateStudentBudgetBreakdown(kosItem) {
+    return calculateStudentBudgetBreakdown(kosItem);
+  },
+
   /**
    * Menyusun teks penjelasan grounded (anti-halusinasi) langsung dari baris data Supabase yang cocok,
-   * lengkap dengan ringkasan suara singkat (`voiceSummary`) untuk dibacakan oleh AI Voice.
+   * lengkap dengan ringkasan suara singkat (\`voiceSummary\`) untuk dibacakan oleh AI Voice.
    */
   buildGroundedReply({ prompt, searchResult, route }) {
     const primary = searchResult.primaryMatch;
@@ -635,8 +691,10 @@ export const accommodationsService = {
       };
     }
 
+    const budget = calculateStudentBudgetBreakdown(primary);
+
     const distInfo = route?.distanceText
-      ? `${route.distanceText} (~${route.walkMinutes} menit jalan kaki / ${route.rideMinutes} menit naik motor ke ${campus.shortName})`
+      ? `${route.distanceText} (~${route.walkMinutes} menit jalan kaki ke gerbang ${campus.shortName})`
       : primary.distance;
 
     const topFeatures = (primary.features || []).slice(0, 4).join(', ');
@@ -658,8 +716,10 @@ export const accommodationsService = {
       `Berdasarkan pencarian Anda di database Teralio sekitar **${campus.name}**, saya telah mengarahkan peta langsung ke rekomendasi terbaik:`,
       '',
       `### 1. ${primary.name} (${primary.tag || `Match ${primary.matchScore}%`})`,
-      `- **Harga & Tipe:** ${primary.price} • Kos ${primary.type} (Sisa ${primary.roomsAvailable} kamar)`,
-      `- **Lokasi & Jarak:** ${primary.address} — **${distInfo}**`,
+      `- **Rincian Biaya:** ${budget.breakdownFormula}`,
+      `- **Jarak Jalan Kaki:** ${distInfo}`,
+      `- **Tipe & Ketersediaan:** Kos ${primary.type} (Sisa ${primary.roomsAvailable} kamar)`,
+      `- **Alamat Lengkap:** ${primary.address}`,
       `- **Fasilitas Utama:** ${topFeatures}`,
       `- **Lingkungan & Fasilitas Sekitar:** Area ${primary.area || campus.city}. Fasilitas penunjang: ${landmarkText}`,
       ...(reviewSnippet ? [`- **Ulasan Penghuni:** ${reviewSnippet}`] : []),
@@ -680,7 +740,7 @@ export const accommodationsService = {
       'Panel **Overview Lokasi** di sebelah kiri peta sudah saya bukakan otomatis agar Anda bisa langsung melihat detail fasilitas, ulasan penghuni, rute kampus, dan jadwal survei.',
     );
 
-    const voiceSummary = `Saya menemukan ${primary.name} di ${primary.area || campus.city}, dengan tarif ${primary.price}, berjarak ${route?.distanceText || primary.distance} atau sekitar ${route?.walkMinutes || 7} menit jalan kaki dari ${campus.shortName}. Peta dan overview kos sudah saya arahkan langsung ke lokasi tersebut.`;
+    const voiceSummary = `${primary.name} di ${primary.area || campus.city}. ${budget.breakdownFormula}, dengan jarak ${distInfo} dari ${campus.shortName}. Peta dan overview kos sudah diarahkan langsung ke lokasi tersebut.`;
 
     return {
       markdown: lines.join('\n'),
@@ -703,7 +763,7 @@ export const accommodationsService = {
   ) {
     const emit = typeof onEvent === 'function' ? onEvent : () => {};
     const isTestEnv = Boolean(process.env.VITEST) || process.env.NODE_ENV === 'test';
-    const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 20;
+    const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 4;
 
     const startTime = Date.now();
     const isDeepThinking = reasoningEffort === 'high' || reasoningEffort === 'xhigh';
@@ -741,7 +801,7 @@ export const accommodationsService = {
 
     const primary = searchResult.primaryMatch;
     const route = primary
-      ? await osmGeoService.computeCampusRoute(searchResult.campus, primary, { mode: 'foot' })
+      ? await osmGeoService.computeCampusRoute(searchResult.campus, primary, { mode: 'foot', timeoutMs: 300 })
       : null;
     await sleep(Math.round(paceMs * 0.75), signal);
 
@@ -835,13 +895,15 @@ export const accommodationsService = {
           contact: k.contact,
         }));
 
+        const budget = calculateStudentBudgetBreakdown(primary);
+
         const stream = await client.responses.create(
           {
             model: config.openai.textModel,
             stream: true,
             instructions:
-              'Kamu adalah asisten Smart Kos Teralio berbahasa Indonesia yang analitis, cermat, dan solutif. Penulisan nama platform adalah "Teralio" (Title Case, huruf kapital di awal saja). DILARANG KERAS MENGGUNAKAN EMOJI ATAU EMOTICON APAPUN. Jangan pernah menghindar dari pertanyaan pengguna: fokuskan berpikir untuk menganalisis kebutuhan tempat tinggal mahasiswa (lingkungan hidup, potensi banjir/keamanan kawasan Bojongsoang/Sukapura/Sukabirus/Dayeuhkolot, ketenangan belajar, jarak aktual dan estimasi waktu tempuh jalan kaki vs motor ke gerbang kampus, serta ketersediaan warteg/minimarket/laundry terdekat). Gunakan HANYA fakta dari data kos dan kampus yang diberikan tanpa mengarang.',
-            input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
+              'Kamu adalah asisten Smart Kos Teralio berbahasa Indonesia yang analitis, cermat, dan solutif. Penulisan nama platform adalah "Teralio" (Title Case, huruf kapital di awal saja). DILARANG KERAS MENGGUNAKAN EMOJI ATAU EMOTICON APAPUN. Jangan pernah menghindar dari pertanyaan pengguna: fokuskan berpikir untuk menganalisis kebutuhan tempat tinggal mahasiswa (lingkungan hidup, potensi banjir/keamanan kawasan Bojongsoang/Sukapura/Sukabirus/Dayeuhkolot, ketenangan belajar, jarak aktual dan estimasi waktu tempuh jalan kaki vs motor ke gerbang kampus, serta ketersediaan warteg/minimarket/laundry terdekat). SELALU sajikan rincian biaya transparan dalam format: sewa pokok + estimasi utilitas bulanan = total biaya per bulan (misal: sewa Rp1.150.000 + utilitas Rp150.000 dengan jarak jalan kaki menghasilkan total Rp1.300.000/bulan). Gunakan HANYA fakta dari data kos dan kampus yang diberikan tanpa mengarang.',
+            input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nRincian Anggaran Mahasiswa: ${budget.breakdownFormula}\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
             max_output_tokens: 650,
           },
           signal ? { signal } : undefined,
