@@ -1651,7 +1651,7 @@ body.teralio-dashboard-body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 1.8rem;
+  bottom: 0.9rem;
   width: min(740px, calc(100vw - 2.5rem));
   z-index: 24;
   display: flex;
@@ -1994,5 +1994,25 @@ body.teralio-dashboard-body {
     right: 0.85rem;
     width: auto;
     top: 5rem;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   10. Cross-Page AI/Voice Sidebar Offset & Visit Schedule Layout
+   -------------------------------------------------------------------------- */
+.dash-main.has-crosspage-ai {
+  padding-right: calc(404px + 2.4rem);
+  max-width: none;
+  transition: padding-right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dash-main.is-schedule-mode {
+  padding-top: 1.6rem;
+}
+
+@media (max-width: 1120px) {
+  .dash-main.has-crosspage-ai {
+    padding-right: 2.25rem;
   }
 }

@@ -77,7 +77,7 @@ export function fromSupabaseRow(row) {
       'Telkom University Bandung',
     city: row.city || 'Bandung',
     area: row.area || '',
-    name: row.name || row.title || 'Hunian Kos TERALIO',
+    name: row.name || row.title || 'Hunian Kos Teralio',
     address: row.address || '',
     lat,
     lng,
@@ -629,7 +629,7 @@ export const accommodationsService = {
     if (!primary) {
       return {
         markdown:
-          'Maaf, saat ini belum ditemukan data kos yang cocok di database TERALIO untuk kriteria tersebut. Silakan coba kata kunci area kampus lain seperti Telkom University, ITB Bandung, UI Depok, atau UGM Yogyakarta.',
+          'Maaf, saat ini belum ditemukan data kos yang cocok di database Teralio untuk kriteria tersebut. Silakan coba kata kunci area kampus lain seperti Telkom University, ITB Bandung, UI Depok, atau UGM Yogyakarta.',
         voiceSummary:
           'Maaf, belum ada kos yang cocok dengan kriteria tersebut di database kami.',
       };
@@ -645,7 +645,7 @@ export const accommodationsService = {
       : 'Tersedia pada panel Overview Kos';
 
     const lines = [
-      `Berdasarkan pencarian Anda di database TERALIO sekitar **${campus.name}**, saya telah mengarahkan peta langsung ke rekomendasi terbaik:`,
+      `Berdasarkan pencarian Anda di database Teralio sekitar **${campus.name}**, saya telah mengarahkan peta langsung ke rekomendasi terbaik:`,
       '',
       `### 1. ${primary.name} (${primary.tag || `Match ${primary.matchScore}%`})`,
       `- **Harga & Tipe:** ${primary.price} • Kos ${primary.type} (Sisa ${primary.roomsAvailable} kamar)`,
@@ -691,7 +691,7 @@ export const accommodationsService = {
   ) {
     const emit = typeof onEvent === 'function' ? onEvent : () => {};
     const isTestEnv = Boolean(process.env.VITEST) || process.env.NODE_ENV === 'test';
-    const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 280;
+    const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 20;
 
     const startTime = Date.now();
     const isDeepThinking = reasoningEffort === 'high' || reasoningEffort === 'xhigh';
@@ -825,7 +825,7 @@ export const accommodationsService = {
             model: config.openai.textModel,
             stream: true,
             instructions:
-              'Kamu adalah asisten Smart Kos TERALIO berbahasa Indonesia yang ringkas, hangat, dan akurat. Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
+              'Kamu adalah asisten Smart Kos Teralio berbahasa Indonesia yang ringkas, hangat, dan akurat. Penulisan nama platform adalah "Teralio" (Title Case, huruf kapital di awal saja; JANGAN PERNAH gunakan huruf kapital semua/CAPSLOCK seperti "TERALIO"). Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
             input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
             max_output_tokens: 650,
           },
@@ -861,7 +861,7 @@ export const accommodationsService = {
         if (signal?.aborted) break;
         emit('text_delta', { delta: chunk });
         if (paceMs > 0) {
-          await sleep(16, signal);
+          await sleep(6, signal);
         }
       }
     }
@@ -1015,7 +1015,7 @@ export const accommodationsService = {
     const record = {
       id,
       accommodationId: String(kos?.id || payload.accommodationId || 'kos-custom'),
-      accommodationName: String(payload.accommodationName || kos?.name || 'Hunian Kos TERALIO'),
+      accommodationName: String(payload.accommodationName || kos?.name || 'Hunian Kos Teralio'),
       campusId: kos?.campusId || payload.campusId || null,
       campusName: String(payload.campusName || kos?.campusName || ''),
       address: String(payload.address || kos?.address || ''),
@@ -1025,7 +1025,7 @@ export const accommodationsService = {
       scheduledIso,
       scheduledTime,
       notes: String(payload.notes || '').trim(),
-      visitorName: String(payload.visitorName || 'Mahasiswa TERALIO'),
+      visitorName: String(payload.visitorName || 'Mahasiswa Teralio'),
       status: String(payload.status || 'Terjadwal'),
       createdAt: nowIso,
       updatedAt: nowIso,

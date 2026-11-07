@@ -18,6 +18,7 @@ export function FullscreenVoiceOverlay({
   userContext = null,
   onVoiceTurnCompleted,
   onVoiceRecommendations,
+  onVoiceUiAction,
 }) {
   const [voiceState, setVoiceState] = useState(INITIAL_VOICE_STATE);
   const [isMuted, setIsMuted] = useState(false);
@@ -27,6 +28,22 @@ export function FullscreenVoiceOverlay({
   const clientRef = useRef(null);
   const heroStageRef = useRef(null);
   const draftTranscriptMapRef = useRef(new Map());
+  const autoStartedRef = useRef(false);
+
+  const latestCallbacksRef = useRef({
+    onVoiceTurnCompleted,
+    onVoiceRecommendations,
+    onVoiceUiAction,
+    userContext,
+    thinkingEnabled,
+  });
+  latestCallbacksRef.current = {
+    onVoiceTurnCompleted,
+    onVoiceRecommendations,
+    onVoiceUiAction,
+    userContext,
+    thinkingEnabled,
+  };
 
   const resetAudioVariables = useCallback(() => {
     const el = heroStageRef.current;
@@ -49,37 +66,12 @@ export function FullscreenVoiceOverlay({
     setVoiceState(INITIAL_VOICE_STATE);
   }, [resetAudioVariables]);
 
-  // Bersihkan koneksi WebRTC & track mikrofon saat overlay ditutup atau unmount
-  useEffect(() => {
-    if (!isOpen) {
-      stopSession();
-      setErrorBanner(null);
-    }
-    return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
-      }
-    };
-  }, [isOpen, stopSession]);
-
   const handleClose = useCallback(async () => {
     await stopSession();
     onClose?.();
   }, [stopSession, onClose]);
 
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        handleClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, handleClose]);
-
-  const handleStartConversation = async () => {
+  const handleStartConversation = useCallback(async () => {
     if (clientRef.current) {
       await stopSession();
     }
@@ -103,7 +95,7 @@ export function FullscreenVoiceOverlay({
         if (final && text) {
           draftTranscriptMapRef.current.delete(itemId);
           setLiveCaption(text);
-          onVoiceTurnCompleted?.({ role, content: text });
+          latestCallbacksRef.current.onVoiceTurnCompleted?.({ role, content: text });
         } else if (delta) {
           const prevText = draftTranscriptMapRef.current.get(itemId) || '';
           const updated = prevText + delta;
@@ -113,7 +105,12 @@ export function FullscreenVoiceOverlay({
       },
       onRecommendations: (recPayload) => {
         if (recPayload?.hasValidRecommendations) {
-          onVoiceRecommendations?.(recPayload);
+          latestCallbacksRef.current.onVoiceRecommendations?.(recPayload);
+        }
+      },
+      onUiAction: (actionPayload) => {
+        if (actionPayload) {
+          latestCallbacksRef.current.onVoiceUiAction?.(actionPayload);
         }
       },
       onError: (err) => {
@@ -127,8 +124,9 @@ export function FullscreenVoiceOverlay({
 
     try {
       await client.connect({
-        userContext,
-        reasoningEffort: thinkingEnabled ? 'high' : 'low',
+        autoGreet: true,
+        userContext: latestCallbacksRef.current.userContext,
+        reasoningEffort: latestCallbacksRef.current.thinkingEnabled ? 'high' : 'low',
       });
     } catch {
       clientRef.current = null;
@@ -142,7 +140,45 @@ export function FullscreenVoiceOverlay({
         label: 'Sesi suara belum aktif',
       });
     }
-  };
+  }, [stopSession, resetAudioVariables]);
+
+  // Saat jendela Voice dibuka di browser yang mendukung WebRTC, langsung buka voice & AI menyapa!
+  useEffect(() => {
+    if (isOpen) {
+      const canUseWebRtc =
+        typeof RTCPeerConnection !== 'undefined' &&
+        typeof navigator !== 'undefined' &&
+        Boolean(navigator.mediaDevices) &&
+        typeof navigator.mediaDevices.getUserMedia === 'function';
+
+      if (canUseWebRtc && !autoStartedRef.current) {
+        autoStartedRef.current = true;
+        handleStartConversation();
+      }
+    } else {
+      autoStartedRef.current = false;
+      stopSession();
+      setErrorBanner(null);
+    }
+
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+        clientRef.current = null;
+      }
+    };
+  }, [isOpen, handleStartConversation, stopSession]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, handleClose]);
 
   const handleToggleMute = () => {
     const next = !isMuted;
@@ -167,7 +203,6 @@ export function FullscreenVoiceOverlay({
       aria-label="TERALIO Voice Conversation"
       data-testid="fullscreen-voice-overlay"
     >
-      {/* Minimal Top Bar: Hanya tombol kembali/tutup */}
       <div className="voice-fullscreen__topbar">
         <span className="voice-fullscreen__brand">TERALIO Voice</span>
         <button
@@ -184,7 +219,6 @@ export function FullscreenVoiceOverlay({
         </button>
       </div>
 
-      {/* Center Stage: Thinking Orbs sebagai pusat visual tunggal (animasi muter saat idle, tanpa backdrop biru) */}
       <div className="voice-fullscreen__center">
         <ThinkingOrbStage
           ref={heroStageRef}
@@ -216,7 +250,6 @@ export function FullscreenVoiceOverlay({
         )}
       </div>
 
-      {/* Bottom Controls: Start Conversation atau kontrol aktif */}
       <div className="voice-fullscreen__bottom">
         {!isSessionActive ? (
           <button
@@ -275,15 +308,15 @@ export function FullscreenVoiceOverlay({
             <button
               type="button"
               className="voice-ctrl-btn is-end"
-              onClick={stopSession}
-              aria-label="Akhiri percakapan suara"
+              onClick={handleClose}
+              aria-label="Selesaikan percakapan suara"
               data-testid="voice-end-btn"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-              <span>End Conversation</span>
+              <span>Selesaikan Conversation</span>
             </button>
           </div>
         )}

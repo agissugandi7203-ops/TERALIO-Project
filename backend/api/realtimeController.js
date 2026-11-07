@@ -9,6 +9,9 @@ export const realtimeSessionOptionsSchema = z.object({
   outputModality: z.enum(['audio', 'text']).optional(),
   turnDetection: z.enum(['semantic_vad', 'server_vad', 'none']).optional(),
   vadEagerness: z.enum(['low', 'medium', 'high', 'auto']).optional(),
+  vadThreshold: z.number().min(0.0).max(1.0).optional(),
+  vadSilenceDurationMs: z.number().int().min(200).max(5000).optional(),
+  vadPrefixPaddingMs: z.number().int().min(100).max(2000).optional(),
   noiseReduction: z.enum(['near_field', 'far_field', 'none']).optional(),
   transcriptionModel: z.string().max(80).optional(),
   transcriptionLanguage: z.string().min(2).max(10).optional(),
@@ -114,6 +117,12 @@ export const realtimeController = {
         data: result,
       });
     } catch (err) {
+      if (err?.status === 404 || err?.statusCode === 404) {
+        return res.status(200).json({
+          success: true,
+          data: { callId: req.params.callId, hungUp: true, alreadyClosed: true },
+        });
+      }
       return next(err);
     }
   },

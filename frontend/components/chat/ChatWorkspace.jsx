@@ -17,6 +17,7 @@ export function ChatWorkspace({
   onConsumePendingPrompt,
   openVoiceSignal = 0,
   onOpenInSmartKos,
+  onUiAction,
 }) {
   const [messages, setMessages] = useState([]);
   const [composerText, setComposerText] = useState('');
@@ -338,6 +339,11 @@ export function ChatWorkspace({
             onRecommendations: (recData) => {
               handleApplyVerifiedRecommendations(recData, assistantMsgId);
             },
+            onUiAction: (actionData) => {
+              if (actionData) {
+                onUiAction?.(actionData);
+              }
+            },
             onTextDelta: ({ delta }) => {
               scheduleDeltaAppend(delta);
             },
@@ -618,6 +624,12 @@ export function ChatWorkspace({
         userContext={user?.fullName ? { userName: user.fullName, city: 'Bandung' } : { city: 'Bandung' }}
         onVoiceTurnCompleted={handleVoiceTurnCompleted}
         onVoiceRecommendations={handleVoiceRecommendations}
+        onVoiceUiAction={(actionData) => {
+          if (actionData?.type === 'open_schedule') {
+            setIsVoiceOpen(false);
+          }
+          onUiAction?.(actionData);
+        }}
       />
     </section>
   );

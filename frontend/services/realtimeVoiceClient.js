@@ -25,7 +25,7 @@ function describeVoiceTool(toolName = '') {
       return 'Menghitung jarak & waktu tempuh...';
     case 'teralio_search_accommodations':
     case 'teralio_get_accommodation_details':
-      return 'Mencari data kos di database TERALIO...';
+      return 'Mencari data kos di database Teralio...';
     case 'teralio_focus_map_location':
       return 'Mengarahkan kamera peta ke lokasi kos...';
     case 'teralio_get_current_datetime':
@@ -179,18 +179,21 @@ export class RealtimeVoiceClient {
       variant: 'default',
       speed: 1.05,
       paused: false,
-      label: 'Menyiapkan sesi suara aman TERALIO...',
+      label: 'Menyiapkan sesi suara aman Teralio...',
     });
 
     try {
       // 1. Minta ephemeral client secret dari backend (tanpa mengekspos OPENAI_API_KEY)
-      // Gunakan server_vad dengan prefix_padding 550ms & far_field agar awal kalimat user tidak terpotong!
+      // Gunakan server_vad dengan threshold 0.55, silence_duration 1000ms & near_field agar tidak mudah terpotong bising sekitar!
       const tokenRes = await fetch('/api/realtime/client-secrets', {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           turnDetection: 'server_vad',
-          noiseReduction: 'far_field',
+          vadThreshold: 0.55,
+          vadSilenceDurationMs: 1000,
+          vadPrefixPaddingMs: 400,
+          noiseReduction: 'near_field',
           reasoningEffort: reasoningEffort === 'high' ? 'high' : 'low',
           enableTools: true,
           ...(voice ? { voice } : {}),
@@ -309,9 +312,28 @@ export class RealtimeVoiceClient {
       }
 
       if (!sdpRes.ok) {
-        const err = new Error(`Pertukaran SDP Realtime gagal (HTTP ${sdpRes.status}).`);
+        let errorDetail = '';
+        try {
+          const rawErr = await sdpRes.text();
+          const parsed = JSON.parse(rawErr);
+          errorDetail = parsed?.error?.message || '';
+        } catch {
+          // ignore parse error
+        }
+
+        let userMsg = `Pertukaran SDP Realtime gagal (HTTP ${sdpRes.status}).`;
+        let code = 'SDP_EXCHANGE_FAILED';
+        if (sdpRes.status === 429) {
+          userMsg =
+            'Batas kuota atau panggilan bersamaan OpenAI tercapai (HTTP 429 Rate Limit). Mohon tunggu sekitar 30 detik sebelum mencoba kembali, atau periksa saldo/kuota API key Anda di platform.openai.com.';
+          code = 'RATE_LIMIT_EXCEEDED';
+        } else if (errorDetail) {
+          userMsg = `${userMsg} Detail: ${errorDetail}`;
+        }
+
+        const err = new Error(userMsg);
         err.status = sdpRes.status;
-        err.code = 'SDP_EXCHANGE_FAILED';
+        err.code = code;
         throw err;
       }
 
@@ -548,7 +570,7 @@ export class RealtimeVoiceClient {
           variant: 'default',
           speed: 1.25,
           paused: false,
-          label: 'TERALIO sedang berbicara...',
+          label: 'Teralio sedang berbicara...',
         });
         break;
 
@@ -562,7 +584,7 @@ export class RealtimeVoiceClient {
             variant: 'default',
             speed: 1.25,
             paused: false,
-            label: 'TERALIO sedang berbicara...',
+            label: 'Teralio sedang berbicara...',
           });
         }
         if (event.delta) {

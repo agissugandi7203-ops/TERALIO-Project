@@ -58,6 +58,9 @@ export async function buildRealtimeSessionConfig({
   outputModality = 'audio',
   turnDetection = 'semantic_vad',
   vadEagerness = config.openai.realtimeVadEagerness,
+  vadThreshold,
+  vadSilenceDurationMs,
+  vadPrefixPaddingMs,
   noiseReduction = 'near_field',
   transcriptionModel = config.openai.realtimeTranscriptionModel,
   transcriptionLanguage = config.openai.realtimeTranscriptionLanguage,
@@ -91,11 +94,24 @@ export async function buildRealtimeSessionConfig({
       interrupt_response: true,
     };
   } else if (turnDetection === 'server_vad') {
+    const threshold =
+      typeof vadThreshold === 'number' && vadThreshold >= 0.0 && vadThreshold <= 1.0
+        ? vadThreshold
+        : config.openai.realtimeVadThreshold;
+    const prefixPaddingMs =
+      typeof vadPrefixPaddingMs === 'number' && vadPrefixPaddingMs >= 100 && vadPrefixPaddingMs <= 2000
+        ? vadPrefixPaddingMs
+        : config.openai.realtimeVadPrefixPaddingMs;
+    const silenceDurationMs =
+      typeof vadSilenceDurationMs === 'number' && vadSilenceDurationMs >= 200 && vadSilenceDurationMs <= 5000
+        ? vadSilenceDurationMs
+        : config.openai.realtimeVadSilenceDurationMs;
+
     resolvedTurnDetection = {
       type: 'server_vad',
-      threshold: 0.42,
-      prefix_padding_ms: 550,
-      silence_duration_ms: 650,
+      threshold,
+      prefix_padding_ms: prefixPaddingMs,
+      silence_duration_ms: silenceDurationMs,
       create_response: true,
       interrupt_response: true,
     };
@@ -382,9 +398,15 @@ export const realtimeService = {
     this.detachSidebandControl(callId);
     const client = getOpenAiClient({ requireConfigured: true });
     try {
-      await client.realtime.calls.hangup(callId);
+      if (typeof client?.realtime?.calls?.hangup === 'function') {
+        await client.realtime.calls.hangup(callId);
+      }
       return { callId, hungUp: true };
     } catch (err) {
+      // Jika panggilan sudah selesai di sisi WebRTC atau OpenAI merespons 404, anggap hangup berhasil (idempotent)
+      if (err?.status === 404 || err?.statusCode === 404 || String(err?.message || '').includes('404')) {
+        return { callId, hungUp: true, alreadyClosed: true };
+      }
       throw fromOpenAiError(err);
     }
   },

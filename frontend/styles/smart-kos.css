@@ -1185,3 +1185,1185 @@
     max-width: none;
   }
 }
+
+
+/* ==========================================================================
+   REVISI v3 — CLEAN GOOGLE-MAPS PLACE CARD (MONOKROM, RINGKAS)
+   ========================================================================== */
+.kos-place-overview.is-gmaps-minimal {
+  top: 0.95rem;
+  bottom: auto;
+  max-height: calc(100% - 1.9rem);
+  width: 344px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow-y: auto;
+  font-family: inherit;
+  color: #202124;
+}
+
+.kos-gmaps-card__header {
+  padding: 1rem 1.1rem 0.75rem;
+}
+
+.kos-gmaps-card__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.kos-gmaps-card__title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #202124;
+  letter-spacing: -0.01em;
+}
+
+.kos-gmaps-card__close {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #5f6368;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.kos-gmaps-card__close:hover {
+  background: #f1f3f4;
+}
+
+.kos-gmaps-card__meta {
+  margin-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: #5f6368;
+}
+
+.kos-gmaps-card__rating {
+  font-weight: 600;
+  color: #202124;
+}
+
+.kos-gmaps-card__stars {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.kos-gmaps-card__muted {
+  color: #5f6368;
+}
+
+.kos-gmaps-card__dot {
+  color: #9aa0a6;
+}
+
+.kos-gmaps-card__price-line {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.kos-gmaps-card__price {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #202124;
+}
+
+.kos-gmaps-card__rooms {
+  font-size: 0.78rem;
+  color: #188038;
+}
+
+.kos-gmaps-card__pills {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.2rem 1.1rem 0.85rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #e8eaed;
+  scrollbar-width: none;
+}
+
+.kos-gmaps-card__pills::-webkit-scrollbar {
+  display: none;
+}
+
+.kos-gmaps-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #1a73e8;
+  font-size: 0.79rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.kos-gmaps-pill:hover:not(:disabled) {
+  background: #f8fbff;
+  border-color: #c6dafc;
+}
+
+.kos-gmaps-pill:disabled {
+  color: #9aa0a6;
+  cursor: not-allowed;
+}
+
+.kos-gmaps-pill.is-filled {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: #ffffff;
+}
+
+.kos-gmaps-pill.is-filled:hover {
+  background: #1765cc;
+}
+
+.kos-gmaps-pill.is-tonal {
+  background: #e8f0fe;
+  border-color: #e8f0fe;
+  color: #1967d2;
+}
+
+.kos-gmaps-card__survey {
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.kos-gmaps-card__survey-label {
+  display: block;
+  font-size: 0.78rem;
+  color: #5f6368;
+  margin-bottom: 0.45rem;
+}
+
+.kos-gmaps-card__survey-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kos-gmaps-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.48rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #202124;
+  font-size: 0.79rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.kos-gmaps-slot-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.kos-gmaps-slot-btn.is-booked {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+  color: #1967d2;
+  font-weight: 500;
+}
+
+.kos-gmaps-card__survey-err {
+  margin: 0.45rem 0 0;
+  font-size: 0.76rem;
+  color: #d93025;
+}
+
+.kos-gmaps-card__survey-ok {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #188038;
+}
+
+.kos-gmaps-card__schedule-link {
+  border: none;
+  background: transparent;
+  color: #1a73e8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.kos-gmaps-card__details {
+  padding: 0.35rem 0 0.75rem;
+}
+
+.kos-gmaps-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: #3c4043;
+}
+
+.kos-gmaps-card__row:hover {
+  background: #f8f9fa;
+}
+
+.kos-gmaps-card__icon {
+  color: #1a73e8;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.kos-gmaps-card__row.is-contact {
+  align-items: center;
+}
+
+.kos-gmaps-card__contact-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.kos-gmaps-card__copy {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #5f6368;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.kos-gmaps-card__copy:hover {
+  background: #f1f3f4;
+}
+
+.kos-gmaps-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.45rem 1.1rem 0.2rem;
+}
+
+.kos-gmaps-card__tag {
+  font-size: 0.74rem;
+  color: #3c4043;
+  background: #f1f3f4;
+  border-radius: 8px;
+  padding: 0.24rem 0.55rem;
+}
+
+/* ==========================================================================
+   REVISI v3 — SIDEBAR PERCAKAPAN BERSIH + COMPOSER RINGKAS
+   ========================================================================== */
+.smart-kos-ai-sidebar__clean-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.smart-kos-ai-sidebar.is-fixed-crosspage {
+  position: fixed;
+  top: 1.15rem;
+  right: 1.15rem;
+  bottom: 1.15rem;
+  width: 404px;
+  z-index: 65;
+}
+
+.smart-kos-ai-sidebar__composer {
+  padding: 0.6rem 0.7rem 0.7rem;
+}
+
+.smart-kos-ai-sidebar__composer .teralio-composer {
+  border-radius: 22px;
+  box-shadow: none;
+  border: 1px solid #e2e8f0;
+}
+
+.smart-kos-ai-sidebar__composer .composer-main-row {
+  min-height: 0;
+}
+
+.smart-kos-ai-sidebar__composer .composer-textarea {
+  min-height: 24px;
+  white-space: pre-wrap;
+}
+
+.smart-kos-ai-sidebar__composer .composer-textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-kos-ai-sidebar__composer .composer-thinking-btn {
+  white-space: nowrap;
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+  font-size: 0.72rem;
+}
+
+/* Voice cover controls */
+.smart-kos-voice-cover__status-visible {
+  margin: 0;
+  text-align: center;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.45;
+  max-width: 320px;
+  min-height: 1.3em;
+}
+
+.smart-kos-voice-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.smart-kos-voice-mute-btn {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.smart-kos-voice-mute-btn:hover {
+  background: #eef2f7;
+}
+
+.smart-kos-voice-mute-btn.is-muted {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.smart-kos-voice-mic-btn.is-finish {
+  flex: 1;
+  background: #0f172a;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.22);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.smart-kos-voice-mic-btn.is-finish:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.smart-kos-voice-redirect-banner {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.smart-kos-voice-redirect-banner strong {
+  color: #0f172a;
+}
+
+.smart-kos-voice-redirect-banner span {
+  color: #475569;
+}
+
+.smart-kos-voice-redirect-banner__btn {
+  background: #0f172a;
+}
+
+/* Floating Voice AI trigger (cross-page) */
+.crosspage-voice-fab {
+  position: fixed;
+  right: 1.6rem;
+  bottom: 1.6rem;
+  z-index: 64;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.45);
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.crosspage-voice-fab:hover {
+  background: #1e293b;
+  transform: translateY(-2px) scale(1.04);
+}
+
+.crosspage-voice-fab:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   REVISI v3 — VISIT SCHEDULE (KALENDER + JANJI TEMU)
+   ========================================================================== */
+.visit-schedule-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding-top: 0.15rem;
+  animation: chatWorkspaceFadeIn 0.3s ease-out both;
+}
+
+.visit-schedule-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.visit-schedule-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.visit-schedule-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #8fa924;
+}
+
+.visit-schedule-wib-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2eaf4;
+  padding: 0.22rem 0.62rem;
+  border-radius: 999px;
+}
+
+.visit-schedule-title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0e1726;
+}
+
+.visit-schedule-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.visit-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.6rem 1.05rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.visit-schedule-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.visit-schedule-btn.is-primary {
+  background: #0e1726;
+  color: #ffffff;
+}
+
+.visit-schedule-btn.is-primary:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.visit-schedule-btn.is-voice {
+  background: #ffffff;
+  color: #0e1726;
+  border-color: #dbe3ee;
+}
+
+.visit-schedule-btn.is-voice:hover {
+  border-color: #94a3b8;
+}
+
+.visit-schedule-btn.is-ghost {
+  background: transparent;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.visit-schedule-btn.is-ghost:hover {
+  background: #f1f5f9;
+}
+
+.visit-schedule-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2eaf4;
+  border-left: 4px solid #8fa924;
+  color: #1e293b;
+  font-size: 0.84rem;
+  box-shadow: 0 6px 18px -10px rgba(15, 23, 42, 0.2);
+}
+
+.visit-schedule-toast > span {
+  flex: 1;
+}
+
+.visit-schedule-toast__close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.visit-schedule-create-card {
+  background: #ffffff;
+  border: 1px solid #e2eaf4;
+  border-radius: 24px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--dash-shadow-card, 0 10px 30px -8px rgba(15, 34, 58, 0.06));
+  animation: fullmapFadeUp 0.22s ease-out;
+}
+
+.visit-schedule-create-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  font-size: 0.95rem;
+  color: #0e1726;
+}
+
+.visit-schedule-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.visit-schedule-create-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.8rem;
+}
+
+.visit-schedule-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.visit-schedule-field > span {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.visit-schedule-field input,
+.visit-schedule-field select {
+  width: 100%;
+  padding: 0.62rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid #dbe3ee;
+  background: #f8fafc;
+  font-size: 0.85rem;
+  color: #0e1726;
+  font-family: inherit;
+}
+
+.visit-schedule-field input:focus,
+.visit-schedule-field select:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: #ffffff;
+}
+
+.visit-schedule-create-actions {
+  margin-top: 0.95rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.visit-schedule-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.35fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+/* Calendar card */
+.visit-calendar-card {
+  background: #ffffff;
+  border: 1px solid #e2eaf4;
+  border-radius: 28px;
+  padding: 1.25rem 1.25rem 1.1rem;
+  box-shadow: var(--dash-shadow-card, 0 10px 30px -8px rgba(15, 34, 58, 0.06));
+}
+
+.visit-calendar-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.visit-calendar-month {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #0e1726;
+  text-transform: capitalize;
+}
+
+.visit-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.visit-calendar-today-btn {
+  padding: 0.36rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #0e1726;
+  cursor: pointer;
+}
+
+.visit-calendar-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0e1726;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.visit-calendar-arrow:hover,
+.visit-calendar-today-btn:hover {
+  background: #f1f5f9;
+}
+
+.visit-calendar-weekdays,
+.visit-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.visit-calendar-weekdays {
+  margin-bottom: 0.4rem;
+}
+
+.visit-calendar-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.visit-calendar-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.visit-calendar-day.is-empty {
+  cursor: default;
+}
+
+.visit-calendar-day:not(.is-empty):hover {
+  background: #f1f5f9;
+}
+
+.visit-calendar-day.is-today {
+  border-color: #8fa924;
+  color: #6b7f19;
+  font-weight: 700;
+}
+
+.visit-calendar-day.has-booking {
+  background: #f4f8e6;
+}
+
+.visit-calendar-day.is-selected,
+.visit-calendar-day.is-selected:hover {
+  background: #0e1726;
+  border-color: #0e1726;
+  color: #ffffff;
+}
+
+.visit-calendar-day__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #8fa924;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.visit-calendar-day.is-selected .visit-calendar-day__badge {
+  background: #d6fa3b;
+  color: #0e1726;
+}
+
+.visit-calendar-footer {
+  margin-top: 0.95rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #eef2f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.visit-calendar-legend {
+  display: flex;
+  gap: 0.85rem;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.visit-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.is-today {
+  border: 2px solid #8fa924;
+}
+
+.legend-dot.is-booked {
+  background: #8fa924;
+}
+
+.visit-calendar-clear-filter {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Appointment list */
+.visit-appointments-panel {
+  background: #ffffff;
+  border: 1px solid #e2eaf4;
+  border-radius: 28px;
+  padding: 1.2rem 1.25rem;
+  box-shadow: var(--dash-shadow-card, 0 10px 30px -8px rgba(15, 34, 58, 0.06));
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.visit-appointments-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.95rem;
+}
+
+.visit-appointments-panel__head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #0e1726;
+}
+
+.visit-appointments-panel__head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.visit-appointments-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  gap: 0.55rem;
+}
+
+.visit-appointments-empty__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #f4f8e6;
+  color: #7b941d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.visit-appointments-empty h4 {
+  margin: 0.2rem 0 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0e1726;
+}
+
+.visit-appointments-empty p {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.visit-appointments-empty__actions {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.visit-appointments-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.visit-booking-card {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 0.95rem;
+  padding: 0.95rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #e8eef5;
+  background: #fbfcfe;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.visit-booking-card:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.visit-booking-card.is-highlighted {
+  border-color: #8fa924;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(143, 169, 36, 0.16);
+  animation: visitHighlightPulse 1.6s ease-out 1;
+}
+
+@keyframes visitHighlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(143, 169, 36, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(143, 169, 36, 0.16);
+  }
+}
+
+.visit-booking-card.is-cancelled {
+  opacity: 0.6;
+}
+
+.visit-booking-card__time-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid #e8eef5;
+}
+
+.visit-booking-card__hour {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0e1726;
+  line-height: 1.15;
+}
+
+.visit-booking-card__date {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.visit-booking-card__top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.visit-booking-card__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0e1726;
+}
+
+.visit-booking-card__label {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.visit-booking-status {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.visit-booking-status.is-confirmed {
+  background: #f4f8e6;
+  color: #5b6e12;
+}
+
+.visit-booking-status.is-updated {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.visit-booking-status.is-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.visit-booking-card__meta {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.visit-booking-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.visit-booking-card__notes {
+  margin: 0.45rem 0 0;
+  font-size: 0.76rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.visit-booking-card__actions {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.visit-card-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.34rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.visit-card-action-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.visit-card-action-btn.is-danger {
+  color: #b91c1c;
+}
+
+.visit-card-action-btn.is-danger:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.visit-booking-reschedule {
+  margin-top: 0.7rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.visit-booking-reschedule__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.visit-booking-reschedule__row input[type='date'] {
+  width: 100%;
+  max-width: 220px;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.visit-booking-reschedule__slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.visit-slot-chip {
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.visit-slot-chip.is-active {
+  background: #0e1726;
+  border-color: #0e1726;
+  color: #ffffff;
+}
+
+.visit-booking-reschedule__actions {
+  margin-top: 0.65rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+@media (max-width: 1100px) {
+  .visit-schedule-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .smart-kos-ai-sidebar.is-fixed-crosspage {
+    inset: 0.5rem;
+    width: auto;
+  }
+
+  .visit-booking-card {
+    grid-template-columns: 1fr;
+  }
+
+  .visit-booking-card__time-col {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+    border-right: none;
+    padding-right: 0;
+  }
+}

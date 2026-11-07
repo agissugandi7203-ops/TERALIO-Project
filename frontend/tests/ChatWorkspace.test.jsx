@@ -340,14 +340,12 @@ describe('TERALIO Unified Chat, Composer, Recommendation Sidebar, & Fullscreen V
     expect(overlay).toBeInTheDocument();
 
     const orbHero = screen.getByTestId('thinking-orb-hero');
-    expect(orbHero).toHaveAttribute('data-orb-state', 'idle');
 
-    // Klik tombol Start Conversation di bagian bawah
-    fireEvent.click(screen.getByTestId('voice-start-btn'));
-
+    // Voice langsung terhubung otomatis (AI menyapa duluan) tanpa perlu klik Start Conversation
     await waitFor(() => {
       expect(screen.getByTestId('voice-active-controls')).toBeInTheDocument();
     });
+    expect(screen.getByTestId('voice-end-btn')).toHaveTextContent(/Selesaikan Conversation/i);
     expect(orbHero).toHaveAttribute('data-voice-phase', 'listening');
     expect(orbHero).toHaveAttribute('data-orb-state', 'idle');
     expect(orbHero).toHaveAttribute('data-orb-variant', 'blink');
@@ -413,7 +411,7 @@ describe('TERALIO Unified Chat, Composer, Recommendation Sidebar, & Fullscreen V
             event: 'text_delta',
             data: {
               delta:
-                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n|---|---|---:|\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
+                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n\n|---|---|---:|\n\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
             },
           },
           {
@@ -421,7 +419,7 @@ describe('TERALIO Unified Chat, Composer, Recommendation Sidebar, & Fullscreen V
             data: {
               responseId: 'resp_table_1',
               outputText:
-                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n|---|---|---:|\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
+                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n\n|---|---|---:|\n\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
               metrics: {
                 elapsedSeconds: 1.2,
                 outputTokens: 240,
@@ -462,9 +460,12 @@ describe('TERALIO Unified Chat, Composer, Recommendation Sidebar, & Fullscreen V
     expect(screen.getByText('Campur')).toHaveClass('table-badge');
     expect(screen.getByText('8 pilihan kos')).toHaveClass('chat-bold');
 
-    // Verifikasi Baris Metrik Throughput & Thinking
-    expect(screen.getByTestId('chat-metrics-bar')).toBeInTheDocument();
-    expect(screen.getByText(/52\.4 tok\/s/)).toBeInTheDocument();
-    expect(screen.getByText(/Deep Reasoning/i)).toBeInTheDocument();
+    // Merek dinormalisasi tidak capslock ("Teralio")
+    expect(screen.getByText(/Teralio mencatat/i)).toBeInTheDocument();
+    expect(screen.queryByText(/TERALIO/)).not.toBeInTheDocument();
+
+    // Metrik token dihilangkan sesuai permintaan pengguna ("gausah")
+    expect(screen.queryByTestId('chat-metrics-bar')).not.toBeInTheDocument();
+    expect(screen.queryByText(/tok\/s/)).not.toBeInTheDocument();
   });
 });

@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Loader2, MapPin, Mic, MicOff, Sparkles, Volume2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { CalendarCheck, MapPin, Mic, MicOff, PhoneOff, Volume2, X } from 'lucide-react';
 import ChatComposer from '../chat/ChatComposer.jsx';
 import ThinkingOrbStage from '../chat/ThinkingOrbStage.jsx';
 import { RealtimeVoiceClient } from '../../services/realtimeVoiceClient.js';
 
 const VOICE_PROGRESS_STEPS = [
   { id: 'listening', label: 'Mendengarkan perintah suara Anda...' },
-  { id: 'intent', label: 'Menganalisis kriteria lokasi, tipe kos, & budget...' },
-  { id: 'database', label: 'Mencari kos terdekat berdasarkan database Supabase...' },
+  { id: 'intent', label: 'Menganalisis kriteria lokasi, tipe kos, & jadwal...' },
+  { id: 'database', label: 'Mencari kos terdekat berdasarkan database...' },
   { id: 'routing', label: 'Menghitung jarak & rute jalan kaki ke kampus...' },
-  { id: 'redirect', label: 'Mengarahkan peta & membuka overview lokasi...' },
+  { id: 'redirect', label: 'Mengarahkan layar & memperbarui tampilan...' },
 ];
 
 function renderFormattedText(text = '') {
@@ -61,6 +61,7 @@ export function SmartKosAiSidebar({
   isStreaming = false,
   activeStatus = null,
   onSelectKos,
+  onOpenSchedule,
   composerValue = '',
   onComposerChange,
   onSubmitPrompt,
@@ -73,18 +74,42 @@ export function SmartKosAiSidebar({
   onExecuteVoiceQuery,
   onVoiceRealtimeTurn,
   onVoiceRealtimeRecommendations,
-  activeCampusName = 'Telkom University Bandung',
-  dataSource = 'supabase',
+  onVoiceUiAction,
+  activeCampusName = 'Universitas Teknologi Bandung (UTB)',
+  activePageLabel = 'Smart Kos Match',
+  fixedMode = false,
 }) {
   const scrollEndRef = useRef(null);
   const recognitionRef = useRef(null);
   const realtimeClientRef = useRef(null);
+  const autoConnectTriggeredRef = useRef(false);
+  const runVoiceSearchPipelineRef = useRef(null);
+
+  // Latest-Ref agar callback WebRTC multi-turn & lintas halaman tidak pernah memegang closure basi
+  const latestPropsRef = useRef({
+    onVoiceRealtimeTurn,
+    onVoiceRealtimeRecommendations,
+    onVoiceUiAction,
+    activeCampusName,
+    activePageLabel,
+    thinkingEnabled,
+  });
+  latestPropsRef.current = {
+    onVoiceRealtimeTurn,
+    onVoiceRealtimeRecommendations,
+    onVoiceUiAction,
+    activeCampusName,
+    activePageLabel,
+    thinkingEnabled,
+  };
 
   const [isListeningMic, setIsListeningMic] = useState(false);
+  const [isConnectingVoice, setIsConnectingVoice] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
   const [voiceStepId, setVoiceStepId] = useState('idle');
   const [voiceStatusLabel, setVoiceStatusLabel] = useState(
-    'Tekan Start Talking atau ucapkan kriteria kos yang ingin dicari',
+    'Menghubungkan asisten suara TERALIO...',
   );
   const [voiceOrbProps, setVoiceOrbProps] = useState({
     state: 'idle',
@@ -92,6 +117,7 @@ export function SmartKosAiSidebar({
     phase: 'idle',
   });
   const [lastRedirectedKos, setLastRedirectedKos] = useState(null);
+  const [lastBookedVisit, setLastBookedVisit] = useState(null);
   const [voiceError, setVoiceError] = useState(null);
 
   useEffect(() => {
@@ -100,7 +126,6 @@ export function SmartKosAiSidebar({
     }
   }, [messages, isStreaming, activeStatus]);
 
-  // Sinkronisasi status SSE backend -> indikator Orb & checklist langkah di layar Voice kanan
   useEffect(() => {
     if (!isVoiceOpen || !activeStatus) return;
     setVoiceOrbProps({
@@ -116,31 +141,213 @@ export function SmartKosAiSidebar({
     }
   }, [isVoiceOpen, activeStatus]);
 
-  // Bersihkan WebRTC Realtime, SpeechRecognition, & TTS saat panel voice ditutup / unmount
-  useEffect(() => {
-    if (!isVoiceOpen) {
-      if (realtimeClientRef.current) {
-        realtimeClientRef.current.disconnect().catch(() => {});
+  const teardownVoiceSession = useCallback(async () => {
+    if (realtimeClientRef.current) {
+      const active = realtimeClientRef.current;
+      realtimeClientRef.current = null;
+      await active.disconnect().catch(() => {});
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore stop error
+      }
+      recognitionRef.current = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+    setIsListeningMic(false);
+    setIsConnectingVoice(false);
+    setIsMuted(false);
+  }, []);
+
+  const startVoiceConversation = useCallback(async () => {
+    await teardownVoiceSession();
+
+    const canUseWebRtc =
+      typeof RTCPeerConnection !== 'undefined' &&
+      typeof navigator !== 'undefined' &&
+      Boolean(navigator.mediaDevices) &&
+      typeof navigator.mediaDevices.getUserMedia === 'function';
+
+    if (canUseWebRtc) {
+      setVoiceError(null);
+      setLiveTranscript('');
+      setLastRedirectedKos(null);
+      setLastBookedVisit(null);
+      setIsConnectingVoice(true);
+
+      const client = new RealtimeVoiceClient({
+        onStateChange: (st) => {
+          setVoiceOrbProps({
+            state: st.orbState || 'idle',
+            variant: st.variant || 'default',
+            phase: st.phase || 'listening',
+          });
+          if (st.label) {
+            setVoiceStatusLabel(st.label);
+          }
+
+          if (st.phase === 'user_speaking') {
+            setLiveTranscript('');
+            setVoiceStepId('listening');
+          } else if (st.phase === 'processing_voice' || st.phase === 'ai_thinking') {
+            setVoiceStepId('intent');
+          } else if (st.phase === 'tool_running') {
+            setVoiceStepId('database');
+          }
+        },
+        onTranscript: (ev) => {
+          if (ev.role === 'user') {
+            if (ev.final && ev.text) {
+              setLiveTranscript(ev.text);
+              latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'user', text: ev.text });
+            } else if (ev.delta) {
+              setLiveTranscript((prev) => `${prev}${ev.delta}`);
+            }
+          } else if (ev.role === 'assistant' && ev.final && ev.text) {
+            latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'assistant', text: ev.text });
+          }
+        },
+        onRecommendations: (recPayload) => {
+          setVoiceStepId('routing');
+          const redirected = latestPropsRef.current.onVoiceRealtimeRecommendations?.(recPayload);
+          if (redirected) {
+            setLastRedirectedKos(redirected);
+            setVoiceStepId('done');
+            setVoiceStatusLabel(`Peta diarahkan ke ${redirected.name}`);
+          }
+        },
+        onUiAction: (actionPayload) => {
+          if (!actionPayload) return;
+          const result = latestPropsRef.current.onVoiceUiAction?.(actionPayload);
+          if (actionPayload.type === 'focus_map' && (result || actionPayload.targetKos)) {
+            const target = result || actionPayload.targetKos;
+            setLastRedirectedKos(target);
+            setVoiceStepId('done');
+            setVoiceStatusLabel(`Peta diarahkan ke ${target.name}`);
+          } else if (actionPayload.type === 'open_schedule') {
+            setLastBookedVisit(actionPayload.booking || { scheduledLabel: 'Jadwal Kunjungan' });
+            setVoiceStepId('done');
+            setVoiceStatusLabel('Halaman Visit Schedule dibuka otomatis');
+          }
+        },
+        onError: (err) => {
+          if (err?.message) {
+            setVoiceError(err.message);
+          }
+        },
+      });
+
+      realtimeClientRef.current = client;
+      try {
+        await client.connect({
+          autoGreet: true,
+          reasoningEffort: latestPropsRef.current.thinkingEnabled ? 'high' : 'low',
+          userContext: {
+            activeCampus: latestPropsRef.current.activeCampusName,
+            activeView: latestPropsRef.current.activePageLabel,
+            instructionHint:
+              'Setiap kali pengguna menanyakan atau berpindah ke kos lain, WAJIB panggil teralio_focus_map_location atau teralio_search_accommodations agar kamera peta berpindah. Jika pengguna setuju survei/booking jam temu, LANGSUNG panggil teralio_create_visit_schedule agar halaman Visit Schedule terbuka otomatis. Jika ingin ganti jam temu, panggil teralio_update_visit_schedule.',
+          },
+        });
+        if (realtimeClientRef.current === client && !client.disposed) {
+          setIsConnectingVoice(false);
+          setIsListeningMic(true);
+          setVoiceStepId('listening');
+        }
+        return;
+      } catch (webrtcErr) {
         realtimeClientRef.current = null;
-      }
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // ignore stop error
-        }
-        recognitionRef.current = null;
-      }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch {
-          // ignore synthesis cancel error
+        setIsConnectingVoice(false);
+        setIsListeningMic(false);
+        if (webrtcErr?.code === 'MIC_PERMISSION_DENIED') {
+          setVoiceError(webrtcErr.message);
+          return;
         }
       }
+    }
+
+    // Fallback untuk browser non-WebRTC (misal SpeechRecognition lokal)
+    const SpeechRec =
+      typeof window !== 'undefined'
+        ? window.SpeechRecognition || window.webkitSpeechRecognition
+        : null;
+
+    if (!SpeechRec) {
+      return;
+    }
+
+    setVoiceError(null);
+    setLiveTranscript('');
+    setLastRedirectedKos(null);
+
+    const rec = new SpeechRec();
+    rec.lang = 'id-ID';
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    let finalSpoken = '';
+
+    rec.onstart = () => {
+      setIsListeningMic(true);
+      setVoiceStepId('listening');
+      setVoiceStatusLabel('Mendengarkan suara Anda...');
+      setVoiceOrbProps({ state: 'idle', variant: 'blink', phase: 'user_speaking' });
+    };
+
+    rec.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const chunk = event.results[i][0]?.transcript || '';
+        if (event.results[i].isFinal) {
+          finalSpoken += `${chunk} `;
+        } else {
+          interim += chunk;
+        }
+      }
+      setLiveTranscript((finalSpoken + interim).trim());
+    };
+
+    rec.onerror = () => {
+      setIsListeningMic(false);
+      setVoiceOrbProps({ state: 'idle', variant: 'default', phase: 'idle' });
+    };
+
+    rec.onend = () => {
+      setIsListeningMic(false);
+      const committed = finalSpoken.trim();
+      if (committed) {
+        runVoiceSearchPipelineRef.current?.(committed);
+      }
+    };
+
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+    } catch {
       setIsListeningMic(false);
     }
-  }, [isVoiceOpen]);
+  }, [teardownVoiceSession]);
+
+  // Saat panel Voice dibuka (klik ikon Wave), langsung buka sesi suara & AI menyapa otomatis!
+  useEffect(() => {
+    if (isVoiceOpen) {
+      if (!autoConnectTriggeredRef.current) {
+        autoConnectTriggeredRef.current = true;
+        startVoiceConversation();
+      }
+    } else {
+      autoConnectTriggeredRef.current = false;
+      teardownVoiceSession();
+    }
+  }, [isVoiceOpen, startVoiceConversation, teardownVoiceSession]);
 
   useEffect(
     () => () => {
@@ -155,19 +362,6 @@ export function SmartKosAiSidebar({
   if (!isOpen && !isVoiceOpen) {
     return null;
   }
-
-  const speakIndonesianSummary = (textToSpeak) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !textToSpeak) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = 'id-ID';
-      utterance.rate = 1.04;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // ignore TTS unsupported browser environments
-    }
-  };
 
   const runVoiceSearchPipeline = async (spokenText) => {
     const cleaned = String(spokenText || '').trim();
@@ -195,9 +389,7 @@ export function SmartKosAiSidebar({
           setVoiceStepId('redirect');
           if (redirectData?.targetKos) {
             setLastRedirectedKos(redirectData.targetKos);
-            setVoiceStatusLabel(
-              `Lokasi ditemukan! Mengarahkan peta ke ${redirectData.targetKos.name}...`,
-            );
+            setVoiceStatusLabel(`Mengarahkan peta ke ${redirectData.targetKos.name}...`);
           }
           setVoiceOrbProps({
             state: 'using',
@@ -207,16 +399,10 @@ export function SmartKosAiSidebar({
         },
       });
 
-      if (doneData?.voiceSummary) {
-        speakIndonesianSummary(doneData.voiceSummary);
-      }
-
       setVoiceStepId('done');
       if (doneData?.targetKos) {
         setLastRedirectedKos(doneData.targetKos);
-        setVoiceStatusLabel(
-          `Selesai — Peta & Overview telah diarahkan ke ${doneData.targetKos.name}`,
-        );
+        setVoiceStatusLabel(`Peta diarahkan ke ${doneData.targetKos.name}`);
       }
       setVoiceOrbProps({ state: 'idle', variant: 'blink', phase: 'listening' });
     } catch (err) {
@@ -224,183 +410,17 @@ export function SmartKosAiSidebar({
       setVoiceOrbProps({ state: 'retrying', variant: 'surge', phase: 'idle' });
     }
   };
+  runVoiceSearchPipelineRef.current = runVoiceSearchPipeline;
 
-  const startBrowserSpeechFallback = () => {
-    const SpeechRec =
-      typeof window !== 'undefined'
-        ? window.SpeechRecognition || window.webkitSpeechRecognition
-        : null;
-
-    if (!SpeechRec) {
-      setVoiceError(
-        'Browser ini belum mengaktifkan mikrofon langsung. Gunakan tombol perintah suara cepat di bawah.',
-      );
-      return;
-    }
-
-    setVoiceError(null);
-    setLiveTranscript('');
-    setLastRedirectedKos(null);
-
-    const rec = new SpeechRec();
-    rec.lang = 'id-ID';
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-
-    let finalSpoken = '';
-
-    rec.onstart = () => {
-      setIsListeningMic(true);
-      setVoiceStepId('listening');
-      setVoiceStatusLabel('Mendengarkan suara Anda... Silakan sebutkan lokasi atau kriteria kos.');
-      setVoiceOrbProps({ state: 'idle', variant: 'blink', phase: 'user_speaking' });
-    };
-
-    rec.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const chunk = event.results[i][0]?.transcript || '';
-        if (event.results[i].isFinal) {
-          finalSpoken += `${chunk} `;
-        } else {
-          interim += chunk;
-        }
-      }
-      setLiveTranscript((finalSpoken + interim).trim());
-    };
-
-    rec.onerror = (ev) => {
-      setIsListeningMic(false);
-      if (ev?.error !== 'aborted') {
-        setVoiceError(
-          'Mikrofon tidak menangkap suara. Anda dapat mencoba lagi atau memilih perintah suara cepat di bawah.',
-        );
-      }
-      setVoiceOrbProps({ state: 'idle', variant: 'default', phase: 'idle' });
-    };
-
-    rec.onend = () => {
-      setIsListeningMic(false);
-      const committed = finalSpoken.trim();
-      if (committed) {
-        runVoiceSearchPipeline(committed);
-      }
-    };
-
-    recognitionRef.current = rec;
-    try {
-      rec.start();
-    } catch {
-      setIsListeningMic(false);
-    }
+  const handleFinishVoiceConversation = async () => {
+    await teardownVoiceSession();
+    onCloseVoice?.();
   };
 
-  const handleToggleMicrophone = async () => {
-    if (isListeningMic) {
-      if (realtimeClientRef.current) {
-        await realtimeClientRef.current.disconnect().catch(() => {});
-        realtimeClientRef.current = null;
-      }
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // ignore stop error
-        }
-        recognitionRef.current = null;
-      }
-      setIsListeningMic(false);
-      return;
-    }
-
-    const canUseWebRtc =
-      typeof RTCPeerConnection !== 'undefined' &&
-      typeof navigator !== 'undefined' &&
-      Boolean(navigator.mediaDevices) &&
-      typeof navigator.mediaDevices.getUserMedia === 'function';
-
-    if (canUseWebRtc) {
-      setVoiceError(null);
-      setLiveTranscript('');
-      setLastRedirectedKos(null);
-
-      const client = new RealtimeVoiceClient({
-        onStateChange: (st) => {
-          setVoiceOrbProps({
-            state: st.orbState || 'idle',
-            variant: st.variant || 'default',
-            phase: st.phase || 'listening',
-          });
-          if (st.label) {
-            setVoiceStatusLabel(st.label);
-          }
-
-          if (st.phase === 'user_speaking') {
-            setLastRedirectedKos(null);
-            setLiveTranscript('');
-            setVoiceStepId('listening');
-          } else if (st.phase === 'processing_voice' || st.phase === 'ai_thinking') {
-            setVoiceStepId((prev) => (prev === 'done' ? 'done' : 'intent'));
-          } else if (st.phase === 'tool_running') {
-            setVoiceStepId('database');
-            setVoiceStatusLabel('Mencari kos terdekat berdasarkan database Supabase...');
-          }
-        },
-        onTranscript: (ev) => {
-          if (ev.role === 'user') {
-            if (ev.final && ev.text) {
-              setLiveTranscript(ev.text);
-              onVoiceRealtimeTurn?.({ role: 'user', text: ev.text });
-            } else if (ev.delta) {
-              setLiveTranscript((prev) => `${prev}${ev.delta}`);
-            }
-          } else if (ev.role === 'assistant' && ev.final && ev.text) {
-            onVoiceRealtimeTurn?.({ role: 'assistant', text: ev.text });
-          }
-        },
-        onRecommendations: (recPayload) => {
-          setVoiceStepId('routing');
-          const redirected = onVoiceRealtimeRecommendations?.(recPayload);
-          if (redirected) {
-            setLastRedirectedKos(redirected);
-            setVoiceStepId('done');
-            setVoiceStatusLabel(
-              `Selesai — Peta & Overview telah diarahkan ke ${redirected.name}`,
-            );
-          }
-        },
-        onError: (err) => {
-          if (err?.message) {
-            setVoiceError(err.message);
-          }
-        },
-      });
-
-      realtimeClientRef.current = client;
-      try {
-        await client.connect({
-          reasoningEffort: thinkingEnabled ? 'high' : 'low',
-          userContext: {
-            activeCampus: activeCampusName,
-            activeView: 'Smart Kos Match Interactive Map',
-            instructionHint:
-              'Wajib panggil tool teralio_search_accommodations saat pengguna mencari kos agar peta Smart Kos langsung redirect otomatis ke lokasi kos.',
-          },
-        });
-        setIsListeningMic(true);
-        setVoiceStepId('listening');
-        return;
-      } catch (webrtcErr) {
-        realtimeClientRef.current = null;
-        setIsListeningMic(false);
-        if (webrtcErr?.code === 'MIC_PERMISSION_DENIED') {
-          setVoiceError(webrtcErr.message);
-          return;
-        }
-      }
-    }
-
-    startBrowserSpeechFallback();
+  const handleToggleMute = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    realtimeClientRef.current?.setMuted(next);
   };
 
   const stepOrder = VOICE_PROGRESS_STEPS.map((s) => s.id);
@@ -408,29 +428,23 @@ export function SmartKosAiSidebar({
     voiceStepId === 'done' ? VOICE_PROGRESS_STEPS.length : stepOrder.indexOf(voiceStepId);
 
   const dynamicVoiceSuggestions = [
+    'Carikan kos terdekat jalan kaki dari kampus UTB Soekarno-Hatta',
     `Carikan kos putri dekat ${activeCampusName.split(' ')[0]} yang hemat`,
-    'Cari kos terdekat jalan kaki dari gerbang PGA Telkom',
     'Carikan kos sekitar ITB Dago yang ada water heater',
-    'Cari kos dekat stasiun KRL UI Depok',
+    'Cari kos dekat gerbang PGA Telkom University',
   ];
+
+  const isSessionLive = isListeningMic || isConnectingVoice;
 
   return (
     <aside
-      className="smart-kos-ai-sidebar"
-      aria-label="Sidebar Percakapan & Suara Smart Kos AI"
+      className={`smart-kos-ai-sidebar ${fixedMode ? 'is-fixed-crosspage' : ''}`}
+      aria-label="Sidebar Percakapan & Suara TERALIO"
       data-testid="smart-kos-ai-sidebar"
     >
-      {/* ==================== LAPISAN #2: CONVERSATION SIDEBAR ==================== */}
+      {/* Header Minimalis & Bersih (Tanpa ikon bintang maupun badge database) */}
       <header className="smart-kos-ai-sidebar__header">
-        <div className="smart-kos-ai-sidebar__brand">
-          <span className="smart-kos-ai-sidebar__badge">
-            <Sparkles size={13} />
-            <span>Smart Kos AI</span>
-          </span>
-          <span className="smart-kos-ai-sidebar__db-tag">
-            {dataSource === 'supabase' ? '● Supabase Live' : '● Supabase Ready'}
-          </span>
-        </div>
+        <span className="smart-kos-ai-sidebar__clean-title">Percakapan</span>
 
         <button
           type="button"
@@ -462,7 +476,6 @@ export function SmartKosAiSidebar({
 
           return (
             <div key={msg.id} className="sk-chat-turn is-assistant">
-              {/* Live Thinking Orb Indicator (sama seperti halaman Chat, hanya bubble muter) */}
               {(msg.isStreaming || msg.statusLabel) && (
                 <div className="sk-chat-orb-row">
                   <ThinkingOrbStage
@@ -480,7 +493,6 @@ export function SmartKosAiSidebar({
                 <div className="sk-chat-assistant-body">{renderFormattedText(msg.text)}</div>
               )}
 
-              {/* Kartu Mini Hasil Kos yang Dapat Diklik untuk Redirect Peta */}
               {Array.isArray(msg.matchedKosList) && msg.matchedKosList.length > 0 && (
                 <div className="sk-chat-matched-list">
                   {msg.matchedKosList.slice(0, 3).map((kosItem) => (
@@ -505,12 +517,30 @@ export function SmartKosAiSidebar({
                   ))}
                 </div>
               )}
+
+              {msg.bookedVisit && onOpenSchedule && (
+                <button
+                  type="button"
+                  className="sk-chat-kos-pill-card"
+                  onClick={() => onOpenSchedule(msg.bookedVisit)}
+                >
+                  <div className="sk-chat-kos-pill-card__main">
+                    <strong>Jadwal Survei: {msg.bookedVisit.accommodationName}</strong>
+                    <span>{msg.bookedVisit.scheduledLabel}</span>
+                  </div>
+                  <span className="sk-chat-kos-pill-card__go">
+                    <CalendarCheck size={13} />
+                    <span>Kalender</span>
+                  </span>
+                </button>
+              )}
             </div>
           );
         })}
         <div ref={scrollEndRef} />
       </div>
 
+      {/* Bottom Composer Ringkas di Bawah (Tidak Menghalangi Inputan) */}
       <div className="smart-kos-ai-sidebar__composer">
         <ChatComposer
           value={composerValue}
@@ -524,30 +554,25 @@ export function SmartKosAiSidebar({
           onSelectFiles={onSelectFiles}
           onRemoveAttachment={onRemoveAttachment}
           isStreaming={isStreaming}
-          placeholder="Tanya lanjut lokasi, harga, atau fasilitas kos..."
+          placeholder="Tanya lanjut..."
         />
       </div>
 
-      {/* ==================== LAPISAN #3: VOICE ORB MENUTUPI CONVERSATION SIDEBAR KANAN ==================== */}
+      {/* Voice Orb Overlay Menutupi Sidebar Kanan */}
       {isVoiceOpen && (
         <div
           className="smart-kos-voice-cover"
           role="dialog"
-          aria-label="Pencarian Suara Smart Kos AI"
+          aria-label="Percakapan Suara TERALIO"
           data-testid="smart-kos-voice-overlay"
         >
           <div className="smart-kos-voice-cover__top">
-            <span
-              className="smart-kos-voice-cover__eyebrow"
-              style={{ color: '#475569', background: '#f8fafc', borderColor: '#e2e8f0' }}
-            >
-              TERALIO Voice
-            </span>
+            <span className="smart-kos-voice-cover__eyebrow">TERALIO Voice</span>
             <button
               type="button"
               className="smart-kos-voice-cover__close"
-              onClick={onCloseVoice}
-              aria-label="Tutup layar suara dan lihat percakapan"
+              onClick={handleFinishVoiceConversation}
+              aria-label="Selesaikan dan tutup percakapan suara"
               data-testid="smart-kos-voice-close-btn"
             >
               <X size={17} />
@@ -565,7 +590,7 @@ export function SmartKosAiSidebar({
               showLabel={false}
             />
 
-            <p className="smart-kos-voice-cover__status sr-only" data-testid="smart-kos-voice-status">
+            <p className="smart-kos-voice-cover__status-visible" data-testid="smart-kos-voice-status">
               {voiceStatusLabel}
             </p>
 
@@ -575,11 +600,7 @@ export function SmartKosAiSidebar({
               </div>
             )}
 
-            {/* Indikator Progres Langkah Database disembunyikan agar visual hanya bubble bersih */}
-            <div
-              className="smart-kos-voice-steps sr-only"
-              data-testid="voice-db-progress-steps"
-            >
+            <div className="smart-kos-voice-steps sr-only" data-testid="voice-db-progress-steps">
               {VOICE_PROGRESS_STEPS.map((step, idx) => {
                 const isDone = currentStepIdx > idx;
                 const isCurrent = currentStepIdx === idx;
@@ -598,7 +619,6 @@ export function SmartKosAiSidebar({
               })}
             </div>
 
-            {/* Banner Konfirmasi Redirect Lokasi Kos */}
             {lastRedirectedKos && (
               <div
                 className="smart-kos-voice-redirect-banner"
@@ -612,18 +632,29 @@ export function SmartKosAiSidebar({
                 </div>
                 <button
                   type="button"
-                  onClick={onCloseVoice}
+                  onClick={handleFinishVoiceConversation}
                   className="smart-kos-voice-redirect-banner__btn"
                 >
-                  Lihat Chat
+                  Selesai
                 </button>
+              </div>
+            )}
+
+            {lastBookedVisit && (
+              <div
+                className="smart-kos-voice-redirect-banner"
+                data-testid="smart-kos-voice-schedule-banner"
+              >
+                <div>
+                  <strong>✓ Janji Temu Terjadwal</strong>
+                  <span>{lastBookedVisit.scheduledLabel || 'Halaman Visit Schedule aktif'}</span>
+                </div>
               </div>
             )}
 
             {voiceError && <p className="smart-kos-voice-error">{voiceError}</p>}
           </div>
 
-          {/* Kontrol Mikrofon & Quick Utterances (disembunyikan dari visual sesuai permintaan: cukup bubble) */}
           <div className="smart-kos-voice-cover__footer">
             <div className="smart-kos-voice-quick-chips sr-only" aria-label="Contoh Perintah Suara Cepat">
               {dynamicVoiceSuggestions.map((utterance) => (
@@ -640,16 +671,42 @@ export function SmartKosAiSidebar({
               ))}
             </div>
 
-            <button
-              type="button"
-              className={`smart-kos-voice-mic-btn ${isListeningMic ? 'is-listening' : ''}`}
-              onClick={handleToggleMicrophone}
-              disabled={isStreaming}
-              data-testid="smart-kos-voice-start-btn"
-            >
-              {isListeningMic ? <MicOff size={18} /> : <Mic size={18} />}
-              <span>{isListeningMic ? 'Mendengarkan...' : 'Start Talking'}</span>
-            </button>
+            <div className="smart-kos-voice-controls-row">
+              {isListeningMic && (
+                <button
+                  type="button"
+                  className={`smart-kos-voice-mute-btn ${isMuted ? 'is-muted' : ''}`}
+                  onClick={handleToggleMute}
+                  aria-label={isMuted ? 'Aktifkan mikrofon' : 'Bisukan mikrofon'}
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                  data-testid="smart-kos-voice-mute-btn"
+                >
+                  {isMuted ? <MicOff size={17} /> : <Mic size={17} />}
+                </button>
+              )}
+
+              {isSessionLive ? (
+                <button
+                  type="button"
+                  className="smart-kos-voice-mic-btn is-finish"
+                  onClick={handleFinishVoiceConversation}
+                  data-testid="smart-kos-voice-end-btn"
+                >
+                  <PhoneOff size={17} />
+                  <span>Selesaikan Conversation</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="smart-kos-voice-mic-btn is-finish"
+                  onClick={handleFinishVoiceConversation}
+                  data-testid="smart-kos-voice-start-btn"
+                >
+                  <PhoneOff size={17} />
+                  <span>Selesaikan Conversation</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

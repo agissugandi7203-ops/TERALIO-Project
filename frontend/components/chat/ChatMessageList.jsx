@@ -4,13 +4,22 @@ import ThinkingOrbStage from './ThinkingOrbStage.jsx';
 const SMART_SCROLL_THRESHOLD_PX = 64;
 
 /**
+ * Normalisasi penulisan merek platform agar tidak capslock ("TERALIO" -> "Teralio")
+ */
+export function normalizeBrandCasing(text) {
+  if (!text) return '';
+  return String(text).replace(/\bTERALIO\b/g, 'Teralio');
+}
+
+/**
  * Merender inline formatting aman (**bold**, __bold__, *italic*, `code`, currency pill, dan [judul](https://url)) tanpa dangerouslySetInnerHTML.
  */
 function renderInlineTokens(text) {
   if (!text) return null;
+  const safeText = normalizeBrandCasing(text);
   // Deteksi bold, inline code, link, dan currency tag
   const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|Rp\s?[\d.,]+(?:\s*\/\s*(?:bln|bulan))?)/g;
-  const parts = String(text).split(pattern);
+  const parts = String(safeText).split(pattern);
 
   return parts.map((part, idx) => {
     if (!part) return null;
@@ -66,19 +75,41 @@ function renderInlineTokens(text) {
 }
 
 /**
- * Cek apakah baris berupa baris tabel markdown (| col1 | col2 | ...)
+ * Membersihkan sel tabel dari spasi dan delimiter luar
  */
-function isTableRow(line) {
-  const trimmed = line.trim();
-  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 3;
+function cleanTableCells(line) {
+  let s = String(line || '').trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|')) s = s.slice(0, -1);
+  return s.split('|').map((c) => c.trim());
 }
 
 /**
- * Cek apakah baris pemisah header tabel (|---|---|:---:|)
+ * Cek apakah baris berupa baris tabel markdown (mengandung pipa dan minimal 2 sel)
+ */
+function isPotentialTableRow(line) {
+  if (!line) return false;
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return false;
+  let core = trimmed;
+  if (core.startsWith('|')) core = core.slice(1);
+  if (core.endsWith('|')) core = core.slice(0, -1);
+  return core.split('|').length >= 2;
+}
+
+/**
+ * Cek apakah baris pemisah header tabel (|---|---|:---:| dll)
  */
 function isTableDivider(line) {
+  if (!line) return false;
   const trimmed = line.trim();
-  return /^\|(?:\s*:?-+:?\s*\|)+$/.test(trimmed);
+  if (!trimmed.includes('-')) return false;
+  let core = trimmed;
+  if (core.startsWith('|')) core = core.slice(1);
+  if (core.endsWith('|')) core = core.slice(0, -1);
+  const parts = core.split('|').map((p) => p.trim());
+  if (parts.length === 0) return false;
+  return parts.every((p) => /^:?-{2,}:?$/.test(p));
 }
 
 /**
@@ -110,7 +141,7 @@ function RenderModernTable({ block }) {
                 const headerText = headers[cIdx] ? headers[cIdx].toLowerCase() : '';
                 const cellText = String(cell).trim();
 
-                // Deteksi kolom tipe kos (Putri / Putra / Campur)
+                // Deteksi kolom tipe kos (Putri / Putra / Campur / Putra-putri)
                 const isTypeCol =
                   headerText.includes('tipe') ||
                   headerText.includes('gender') ||
@@ -123,6 +154,8 @@ function RenderModernTable({ block }) {
                     badgeClass = 'is-putri';
                   } else if (lower.includes('putra') && !lower.includes('putri')) {
                     badgeClass = 'is-putra';
+                  } else if (lower.includes('putra') && lower.includes('putri')) {
+                    badgeClass = 'is-putra-putri';
                   }
 
                   return (
@@ -154,7 +187,7 @@ function RenderModernTable({ block }) {
                       className="td-price-cell"
                     >
                       <span className="table-price-tag">
-                        {renderInlineTokens(cellText)}
+                        {cellText}
                       </span>
                     </td>
                   );
@@ -183,7 +216,8 @@ function RenderModernTable({ block }) {
 
 function FormattedMessageContent({ text }) {
   if (!text) return null;
-  const lines = String(text).replace(/\r\n/g, '\n').split('\n');
+  const safeText = normalizeBrandCasing(text);
+  const lines = safeText.replace(/\r\n/g, '\n').split('\n');
   const blocks = [];
   let currentList = null;
 
@@ -205,46 +239,69 @@ function FormattedMessageContent({ text }) {
       continue;
     }
 
-    // 1. Deteksi Tabel Markdown (| header | header | ...)
-    if (
-      isTableRow(trimmed) &&
-      idx + 1 < lines.length &&
-      isTableDivider(lines[idx + 1])
-    ) {
-      flushList();
-
-      const tableLines = [];
-      while (idx < lines.length && isTableRow(lines[idx])) {
-        tableLines.push(lines[idx].trim());
-        idx++;
+    // 1. Deteksi Tabel Markdown (| header | header | ...) tahan baris kosong antar-baris
+    if (isPotentialTableRow(trimmed)) {
+      let nextNonEmptyIdx = idx + 1;
+      while (nextNonEmptyIdx < lines.length && !lines[nextNonEmptyIdx].trim()) {
+        nextNonEmptyIdx++;
       }
 
-      const cleanCells = (l) =>
-        l
-          .split('|')
-          .slice(1, -1)
-          .map((c) => c.trim());
+      if (
+        nextNonEmptyIdx < lines.length &&
+        isTableDivider(lines[nextNonEmptyIdx])
+      ) {
+        flushList();
 
-      const headers = cleanCells(tableLines[0]);
-      const dividerCells = cleanCells(tableLines[1]);
-      const rows = tableLines.slice(2).map(cleanCells).filter((r) => r.length > 0);
+        const tableLines = [trimmed, lines[nextNonEmptyIdx].trim()];
+        let cur = nextNonEmptyIdx + 1;
 
-      const alignments = dividerCells.map((d) => {
-        const left = d.startsWith(':');
-        const right = d.endsWith(':');
-        if (left && right) return 'center';
-        if (right) return 'right';
-        return 'left';
-      });
+        while (cur < lines.length) {
+          const l = lines[cur].trim();
+          if (!l) {
+            let lookAhead = cur + 1;
+            while (lookAhead < lines.length && !lines[lookAhead].trim()) {
+              lookAhead++;
+            }
+            if (lookAhead < lines.length && isPotentialTableRow(lines[lookAhead])) {
+              cur = lookAhead;
+              continue;
+            } else {
+              break;
+            }
+          }
 
-      blocks.push({
-        type: 'table',
-        key: `table-${idx}`,
-        headers,
-        alignments,
-        rows,
-      });
-      continue;
+          if (isPotentialTableRow(l)) {
+            tableLines.push(l);
+            cur++;
+          } else {
+            break;
+          }
+        }
+
+        const headers = cleanTableCells(tableLines[0]);
+        const dividerCells = cleanTableCells(tableLines[1]);
+        const rows = tableLines.slice(2).map(cleanTableCells).filter((r) => r.length > 0 && r.some(Boolean));
+
+        const alignments = dividerCells.map((d) => {
+          const t = d.trim();
+          const left = t.startsWith(':');
+          const right = t.endsWith(':');
+          if (left && right) return 'center';
+          if (right) return 'right';
+          return 'left';
+        });
+
+        blocks.push({
+          type: 'table',
+          key: `table-${idx}`,
+          headers,
+          alignments,
+          rows,
+        });
+
+        idx = cur;
+        continue;
+      }
     }
 
     // 2. Deteksi Callout Quote (> Catatan atau kutipan)
@@ -411,10 +468,12 @@ const ChatMessageItem = memo(function ChatMessageItem({
               showLabel={false}
             />
             <span className="chat-turn__status-text">
-              {message.statusLabel ||
-                (message.orbVariant === 'twins'
-                  ? 'Menalar secara mendalam (Thinking High)...'
-                  : 'Memproses respons...')}
+              {normalizeBrandCasing(
+                message.statusLabel ||
+                  (message.orbVariant === 'twins'
+                    ? 'Menalar secara mendalam (Thinking High)...'
+                    : 'Memproses respons...'),
+              )}
             </span>
           </div>
         )}
@@ -422,39 +481,11 @@ const ChatMessageItem = memo(function ChatMessageItem({
         {/* Teks percakapan terstruktur progresif (Markdown table, bold, pills, callout) */}
         {message.content ? (
           isUser ? (
-            <p className="chat-user-text">{message.content}</p>
+            <p className="chat-user-text">{normalizeBrandCasing(message.content)}</p>
           ) : (
             <FormattedMessageContent text={message.content} />
           )
         ) : null}
-
-        {/* Baris Metrik Throughput & Thinking Mode Transparan (tok/s, waktu, token) */}
-        {!isUser && message.metrics && (
-          <div className="chat-turn__metrics-bar" data-testid="chat-metrics-bar">
-            <span className="chat-metric-chip is-speed" title="Kecepatan respons token per detik (Throughput)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-              <span>{message.metrics.throughput} tok/s</span>
-            </span>
-            <span className="chat-metric-chip" title="Durasi pemrosesan respons">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>{message.metrics.elapsedSeconds}s</span>
-            </span>
-            {message.metrics.isDeepThinking && (
-              <span className="chat-metric-chip is-thinking" title="Mode Reasoning Mendalam Aktif">
-                <span className="thinking-chip-dot" />
-                <span>Deep Reasoning</span>
-              </span>
-            )}
-            <span className="chat-metric-chip is-tokens" title="Total token respons">
-              <span>{message.metrics.outputTokens} tok</span>
-            </span>
-          </div>
-        )}
 
         {/* Pesan error transparan & jujur */}
         {message.error && (
@@ -519,7 +550,16 @@ export function ChatMessageList({
   const scrollContainerRef = useRef(null);
   const pinnedRef = useRef(true);
   const prevCountRef = useRef(messages.length);
+  const rafScrollRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (rafScrollRef.current && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(rafScrollRef.current);
+      }
+    };
+  }, []);
 
   const scrollToBottom = useCallback((behavior = 'auto') => {
     const el = scrollContainerRef.current;
@@ -533,6 +573,25 @@ export function ChatMessageList({
     }
   }, []);
 
+  const requestScrollPin = useCallback(() => {
+    if (!pinnedRef.current) return;
+    if (rafScrollRef.current) return;
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      rafScrollRef.current = window.requestAnimationFrame(() => {
+        rafScrollRef.current = 0;
+        const el = scrollContainerRef.current;
+        if (el && pinnedRef.current) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    } else {
+      const el = scrollContainerRef.current;
+      if (el && pinnedRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  }, []);
+
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -542,7 +601,7 @@ export function ChatMessageList({
     setShowScrollButton(!isNearBottom && el.scrollHeight > el.clientHeight + 80);
   }, []);
 
-  // Saat pesan baru dari user masuk, otomatis scroll ke bawah; saat streaming delta, scroll hanya bila pinned
+  // Saat pesan baru dari user masuk, otomatis scroll ke bawah; saat streaming delta, scroll dengan rAF pin anti tersendat
   const lastMsgContent = messages.at(-1)?.content || '';
   const lastMsgStatus = messages.at(-1)?.statusLabel || '';
 
@@ -557,9 +616,9 @@ export function ChatMessageList({
     }
 
     if (pinnedRef.current) {
-      scrollToBottom('auto');
+      requestScrollPin();
     }
-  }, [messages.length, lastMsgContent, lastMsgStatus, isStreaming, scrollToBottom]);
+  }, [messages.length, lastMsgContent, lastMsgStatus, isStreaming, scrollToBottom, requestScrollPin]);
 
   return (
     <div className="chat-stream-wrapper">
@@ -578,6 +637,8 @@ export function ChatMessageList({
               onRetry={onRetryMessage}
             />
           ))}
+          {/* Invisible anchor for native browser scroll anchoring */}
+          <div className="chat-scroll-anchor" aria-hidden="true" />
         </div>
       </div>
 

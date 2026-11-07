@@ -10,6 +10,7 @@
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
+  background: #f0f7ff;
 }
 
 .teralio-chat-workspace {
@@ -19,10 +20,10 @@
   height: calc(100vh - 2.3rem);
   max-height: calc(100vh - 2.3rem);
   width: 100%;
-  background: #ffffff;
-  border: 1px solid rgba(226, 234, 244, 0.9);
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
   border-radius: 30px;
-  box-shadow: 0 12px 36px -12px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 36px -12px rgba(37, 99, 235, 0.08);
   display: flex;
   overflow: hidden;
   isolation: isolate;
@@ -38,7 +39,7 @@
   }
 }
 
-/* Soft Centered Sky-Blue Radial Ambient Glow (Matches Reference Screenshot) */
+/* Soft Centered Sky-Blue Radial Ambient Glow (Crisp Blue, Absolutely No Green) */
 .teralio-chat-ambient {
   position: absolute;
   inset: 0;
@@ -46,10 +47,10 @@
   z-index: 0;
   background:
     radial-gradient(
-      44% 40% at 53% 47%,
-      rgba(182, 218, 255, 0.54) 0%,
-      rgba(209, 233, 255, 0.34) 42%,
-      rgba(255, 255, 255, 0) 76%
+      52% 48% at 50% 46%,
+      rgba(37, 99, 235, 0.12) 0%,
+      rgba(96, 165, 250, 0.08) 45%,
+      rgba(240, 247, 255, 0) 80%
     );
   transition: opacity 0.45s ease;
   animation: chatAmbientEntrance 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -242,6 +243,15 @@
   overflow-x: hidden;
   padding: 2.25rem 1.5rem 1.25rem;
   scroll-behavior: auto;
+  overflow-anchor: auto;
+}
+
+.chat-scroll-anchor {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+  overflow-anchor: auto;
+  flex-shrink: 0;
 }
 
 .chat-stream-inner {
@@ -272,11 +282,11 @@
 }
 
 .chat-turn.is-user .chat-turn__bubble {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #eff6ff;
+  color: #1e3a8a;
   padding: 0.82rem 1.12rem;
   border-radius: 22px 22px 6px 22px;
-  border: 1px solid rgba(226, 232, 240, 0.85);
+  border: 1px solid #bfdbfe;
 }
 
 .chat-turn.is-assistant .chat-turn__bubble {
@@ -378,10 +388,10 @@
   display: inline-flex;
   align-items: center;
   font-weight: 700;
-  color: #047857;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  padding: 0.08rem 0.42rem;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 0.08rem 0.45rem;
   border-radius: 6px;
   font-size: 0.94em;
   white-space: nowrap;
@@ -391,8 +401,8 @@
 .chat-callout-card {
   display: flex;
   gap: 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
   border-left: 3.5px solid #2563eb;
   border-radius: 0 14px 14px 0;
   padding: 0.85rem 1.05rem;
@@ -414,10 +424,10 @@
   max-width: 100%;
   overflow-x: auto;
   margin: 1.15rem 0;
-  border: 1px solid rgba(226, 232, 240, 0.95);
+  border: 1px solid #e0edff;
   border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 16px -4px rgba(37, 99, 235, 0.06);
   scrollbar-width: thin;
 }
 
@@ -431,15 +441,15 @@
 }
 
 .chat-modern-table thead tr {
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: #f0f7ff;
+  border-bottom: 1px solid #dbeafe;
 }
 
 .chat-modern-table th {
   padding: 0.82rem 1.05rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #475569;
+  color: #1e3a8a;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -457,7 +467,7 @@
 }
 
 .chat-modern-table tbody tr:hover td {
-  background: #f8fafc;
+  background: #f8fbff;
 }
 
 .chat-modern-table td.td-kos-name {
@@ -474,8 +484,13 @@
   align-items: baseline;
   gap: 0.2rem;
   font-weight: 700;
-  color: #047857;
-  font-size: 1.01rem;
+  color: #1d4ed8;
+  font-size: 0.98rem;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 0.18rem 0.55rem;
+  border-radius: 8px;
+  letter-spacing: -0.01em;
 }
 
 .table-price-tag small {
@@ -522,13 +537,15 @@
   background: #3b82f6;
 }
 
-.table-badge.is-campur {
+.table-badge.is-campur,
+.table-badge.is-putra-putri {
   background: #f5f3ff;
   color: #6d28d9;
   border: 1px solid #ddd6fe;
 }
 
-.table-badge.is-campur .badge-dot {
+.table-badge.is-campur .badge-dot,
+.table-badge.is-putra-putri .badge-dot {
   background: #8b5cf6;
 }
 

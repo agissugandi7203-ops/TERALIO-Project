@@ -25,6 +25,11 @@ const int = (name, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const float = (name, fallback) => {
+  const parsed = Number.parseFloat(process.env[name] ?? '');
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const bool = (name, fallback = false) => {
   const value = process.env[name];
   if (value === undefined || value.trim() === '') return fallback;
@@ -107,6 +112,9 @@ export const config = {
     realtimeTranscriptionModel: str('OPENAI_REALTIME_TRANSCRIPTION_MODEL', 'gpt-transcribe'),
     realtimeTranscriptionLanguage: str('OPENAI_REALTIME_TRANSCRIPTION_LANGUAGE', 'id'),
     realtimeVadEagerness: str('OPENAI_REALTIME_VAD_EAGERNESS', 'auto'),
+    realtimeVadThreshold: float('OPENAI_REALTIME_VAD_THRESHOLD', 0.55),
+    realtimeVadSilenceDurationMs: int('OPENAI_REALTIME_VAD_SILENCE_DURATION_MS', 1000),
+    realtimeVadPrefixPaddingMs: int('OPENAI_REALTIME_VAD_PREFIX_PADDING_MS', 400),
     realtimeTokenTtlSeconds: int('OPENAI_REALTIME_TOKEN_TTL_SECONDS', 600),
     realtimeMaxOutputTokens: int('OPENAI_REALTIME_MAX_OUTPUT_TOKENS', 0) || 'inf',
   },
