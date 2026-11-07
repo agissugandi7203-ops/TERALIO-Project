@@ -12,20 +12,20 @@ import '../styles/smart-kos.css';
 
 export const CAMPUS_HUBS = [
   {
-    id: 'utb',
-    shortName: 'UTB Bandung',
-    name: 'Universitas Teknologi Bandung (UTB)',
-    address: 'Jl. Soekarno-Hatta No. 378, Kebon Lega, Bojongloa Kidul, Kota Bandung',
-    lat: -6.9482,
-    lng: 107.6011,
-  },
-  {
     id: 'telkom',
     shortName: 'Telkom Univ',
     name: 'Telkom University Bandung',
     address: 'Jl. Telekomunikasi No. 1, Terusan Buahbatu, Bandung',
     lat: -6.9733,
     lng: 107.6305,
+  },
+  {
+    id: 'utb',
+    shortName: 'UTB Bandung',
+    name: 'Universitas Teknologi Bandung (UTB)',
+    address: 'Jl. Soekarno-Hatta No. 378, Kebon Lega, Bojongloa Kidul, Kota Bandung',
+    lat: -6.9482,
+    lng: 107.6011,
   },
   {
     id: 'itb',
@@ -70,7 +70,7 @@ export const SmartKosMapView = ({
   const [campusHubsMap, setCampusHubsMap] = useState(() =>
     Object.fromEntries(CAMPUS_HUBS.map((c) => [c.id, c])),
   );
-  const [selectedCampusId, setSelectedCampusId] = useState('utb');
+  const [selectedCampusId, setSelectedCampusId] = useState('telkom');
   const [catalogItems, setCatalogItems] = useState([]);
 
   const [mapType, setMapType] = useState('satellite');
@@ -107,7 +107,7 @@ export const SmartKosMapView = ({
   const isStreamingAi = sharedAiAssistant ? sharedAiAssistant.isStreaming : localIsStreaming;
 
   const selectedCampus = useMemo(
-    () => campusHubsMap[selectedCampusId] || CAMPUS_HUBS[0],
+    () => (selectedCampusId !== 'all' && campusHubsMap[selectedCampusId]) || CAMPUS_HUBS[0],
     [campusHubsMap, selectedCampusId],
   );
 
@@ -135,7 +135,10 @@ export const SmartKosMapView = ({
   }, [onCatalogLoaded]);
 
   const visibleAccommodations = useMemo(() => {
-    const campusItems = catalogItems.filter((item) => item.campusId === selectedCampusId);
+    const campusItems =
+      selectedCampusId === 'all'
+        ? catalogItems
+        : catalogItems.filter((item) => item.campusId === selectedCampusId);
     const baseList = campusItems.length > 0 ? campusItems : catalogItems;
 
     const knownIds = new Set(baseList.map((k) => k.id));
@@ -710,6 +713,44 @@ export const SmartKosMapView = ({
         {/* FLOATING TOP-RIGHT: Layer Toggle (Peta / Satelit), Zoom, & Recenter */}
         <div className="fullmap-hud-topright" role="toolbar" aria-label="Kontrol Peta TERALIO">
           <div className="fullmap-topright-bar">
+            <div className="map-campus-toggle" style={{ pointerEvents: 'auto' }}>
+              <select
+                value={selectedCampusId}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  setSelectedCampusId(nextId);
+                  setSelectedKos(null);
+                  setActiveRoute(null);
+                  if (nextId !== 'all' && campusHubsMap[nextId]) {
+                    setZoom(16);
+                    setFlyToTrigger((n) => n + 1);
+                  }
+                }}
+                className="map-campus-select"
+                aria-label="Pilih Area Kampus"
+                data-testid="map-campus-selector"
+              >
+                <option value="telkom">
+                  Telkom Univ ({catalogItems.filter((k) => k.campusId === 'telkom').length || 35} kos)
+                </option>
+                <option value="all">
+                  Semua Kampus ({catalogItems.length || 46} kos)
+                </option>
+                <option value="utb">
+                  UTB Bandung ({catalogItems.filter((k) => k.campusId === 'utb').length || 4} kos)
+                </option>
+                <option value="itb">
+                  ITB Bandung ({catalogItems.filter((k) => k.campusId === 'itb').length || 3} kos)
+                </option>
+                <option value="ui">
+                  UI Depok ({catalogItems.filter((k) => k.campusId === 'ui').length || 2} kos)
+                </option>
+                <option value="ugm">
+                  UGM Yogya ({catalogItems.filter((k) => k.campusId === 'ugm').length || 2} kos)
+                </option>
+              </select>
+            </div>
+
             <div className="map-layer-toggle">
               <button
                 type="button"

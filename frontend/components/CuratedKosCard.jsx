@@ -81,7 +81,6 @@ export const CuratedKosCard = ({ onOpenKosInMap } = {}) => {
           title={onOpenKosInMap ? 'Klik untuk langsung melihat di peta' : undefined}
         >
           <span className="curated-card__badge">
-            <span aria-hidden="true">🌙</span>
             <span>{current.badge}</span>
           </span>
           <p className="curated-card__copy">{current.copy}</p>

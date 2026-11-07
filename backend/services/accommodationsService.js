@@ -644,6 +644,16 @@ export const accommodationsService = {
       ? `${primary.contact.ownerName ? `${primary.contact.ownerName} • ` : ''}${primary.contact.phone}`
       : 'Tersedia pada panel Overview Kos';
 
+    const landmarkText =
+      Array.isArray(primary.nearbyLandmarks) && primary.nearbyLandmarks.length > 0
+        ? primary.nearbyLandmarks.map((l) => `${l.name} (${l.distance})`).join(', ')
+        : 'Dekat minimarket dan kuliner mahasiswa';
+
+    const reviewSnippet =
+      Array.isArray(primary.reviews) && primary.reviews.length > 0 && primary.reviews[0]?.comment
+        ? `"${primary.reviews[0].comment}" — ${primary.reviews[0].author || 'Mahasiswa'}`
+        : null;
+
     const lines = [
       `Berdasarkan pencarian Anda di database Teralio sekitar **${campus.name}**, saya telah mengarahkan peta langsung ke rekomendasi terbaik:`,
       '',
@@ -651,6 +661,8 @@ export const accommodationsService = {
       `- **Harga & Tipe:** ${primary.price} • Kos ${primary.type} (Sisa ${primary.roomsAvailable} kamar)`,
       `- **Lokasi & Jarak:** ${primary.address} — **${distInfo}**`,
       `- **Fasilitas Utama:** ${topFeatures}`,
+      `- **Lingkungan & Fasilitas Sekitar:** Area ${primary.area || campus.city}. Fasilitas penunjang: ${landmarkText}`,
+      ...(reviewSnippet ? [`- **Ulasan Penghuni:** ${reviewSnippet}`] : []),
       `- **Kontak Pengelola:** ${contactLine}`,
     ];
 
@@ -812,11 +824,14 @@ export const accommodationsService = {
           name: k.name,
           type: k.type,
           price: k.price,
+          area: k.area,
           address: k.address,
           distance: k.distance,
           rating: k.rating,
           roomsAvailable: k.roomsAvailable,
           features: k.features,
+          nearbyLandmarks: k.nearbyLandmarks,
+          reviews: (k.reviews || []).slice(0, 2),
           contact: k.contact,
         }));
 
@@ -825,7 +840,7 @@ export const accommodationsService = {
             model: config.openai.textModel,
             stream: true,
             instructions:
-              'Kamu adalah asisten Smart Kos Teralio berbahasa Indonesia yang ringkas, hangat, dan akurat. Penulisan nama platform adalah "Teralio" (Title Case, huruf kapital di awal saja; JANGAN PERNAH gunakan huruf kapital semua/CAPSLOCK seperti "TERALIO"). Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
+              'Kamu adalah asisten Smart Kos Teralio berbahasa Indonesia yang analitis, cermat, dan solutif. Penulisan nama platform adalah "Teralio" (Title Case, huruf kapital di awal saja). DILARANG KERAS MENGGUNAKAN EMOJI ATAU EMOTICON APAPUN. Jangan pernah menghindar dari pertanyaan pengguna: fokuskan berpikir untuk menganalisis kebutuhan tempat tinggal mahasiswa (lingkungan hidup, potensi banjir/keamanan kawasan Bojongsoang/Sukapura/Sukabirus/Dayeuhkolot, ketenangan belajar, jarak aktual dan estimasi waktu tempuh jalan kaki vs motor ke gerbang kampus, serta ketersediaan warteg/minimarket/laundry terdekat). Gunakan HANYA fakta dari data kos dan kampus yang diberikan tanpa mengarang.',
             input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
             max_output_tokens: 650,
           },

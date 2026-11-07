@@ -46,7 +46,6 @@ export const MatchStatusCard = () => {
           </p>
           <span className="lime-well-done-pill">
             <span>Well Matched</span>
-            <span aria-hidden="true">👍</span>
           </span>
         </div>
 

@@ -287,7 +287,8 @@ export function KosPlaceOverviewCard({
           {bookedRecord && (
             <div className="kos-gmaps-card__survey-ok" data-testid="overview-survey-confirmed">
               <span>
-                ✓ Terjadwal <strong>{bookedRecord.scheduledLabel}</strong>
+                <Check size={12} style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: '4px' }} />
+                Terjadwal <strong>{bookedRecord.scheduledLabel}</strong>
               </span>
               {onOpenSchedule && (
                 <button

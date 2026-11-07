@@ -50,15 +50,15 @@ export const OpenAiCard = () => {
   return (
     <div className="card" data-testid="openai-card" style={{ gridColumn: '1 / -1' }}>
       <h3 className="card-title">
-        <span>🤖</span> Integrasi OpenAI Assistant (Teralio)
+        Integrasi OpenAI Assistant (Teralio)
       </h3>
       <div className="card-content">
         <p>
           Status Kredensial:{' '}
           {status?.configured ? (
-            <span className="status-indicator connected">✅ API Key Aktif ({status.model})</span>
+            <span className="status-indicator connected">API Key Aktif ({status.model})</span>
           ) : (
-            <span className="status-indicator pending">⚠️ Menggunakan Mode Simulasi / Dev</span>
+            <span className="status-indicator pending">Mode Simulasi / Dev</span>
           )}
         </p>
 
@@ -84,7 +84,7 @@ export const OpenAiCard = () => {
             disabled={loading}
             data-testid="openai-send-btn"
           >
-            {loading ? 'Mengirim...' : '🚀 Kirim ke OpenAI'}
+            {loading ? 'Mengirim...' : 'Kirim ke OpenAI'}
           </button>
         </form>
 

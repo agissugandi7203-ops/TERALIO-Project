@@ -185,7 +185,9 @@ export function InPlatformMapCanvas({
         html: `
           <div class="teralio-campus-pin" title="${escapeHtml(campus.name)}">
             <span class="teralio-campus-pin__pulse"></span>
-            <span class="teralio-campus-pin__core">🎓</span>
+            <span class="teralio-campus-pin__core">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </span>
             <span class="teralio-campus-pin__label">${escapeHtml(campus.shortName || campus.name)}</span>
           </div>
         `,

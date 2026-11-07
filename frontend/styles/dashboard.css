@@ -1559,6 +1559,34 @@ body.teralio-dashboard-body {
   justify-content: flex-end;
 }
 
+.map-campus-toggle {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  border-radius: var(--radius-pill);
+  padding: 0.18rem 0.55rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.map-campus-select {
+  border: none;
+  background: transparent;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  padding: 0.32rem 0.3rem;
+}
+
+.map-campus-select:focus {
+  outline: none;
+}
+
 .map-layer-toggle {
   pointer-events: auto;
   display: inline-flex;

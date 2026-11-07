@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarCheck, MapPin, Mic, MicOff, PhoneOff, Volume2, X } from 'lucide-react';
+import { CalendarCheck, Check, MapPin, Mic, MicOff, PhoneOff, Volume2, X } from 'lucide-react';
 import ChatComposer from '../chat/ChatComposer.jsx';
 import ThinkingOrbStage from '../chat/ThinkingOrbStage.jsx';
 import { RealtimeVoiceClient } from '../../services/realtimeVoiceClient.js';
@@ -625,7 +625,10 @@ export function SmartKosAiSidebar({
                 data-testid="smart-kos-voice-redirect-banner"
               >
                 <div>
-                  <strong>✓ Diarahkan ke {lastRedirectedKos.name}</strong>
+                  <strong>
+                    <Check size={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: '4px' }} />
+                    Diarahkan ke {lastRedirectedKos.name}
+                  </strong>
                   <span>
                     {lastRedirectedKos.price} • {lastRedirectedKos.distance}
                   </span>
@@ -646,7 +649,10 @@ export function SmartKosAiSidebar({
                 data-testid="smart-kos-voice-schedule-banner"
               >
                 <div>
-                  <strong>✓ Janji Temu Terjadwal</strong>
+                  <strong>
+                    <Check size={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: '4px' }} />
+                    Janji Temu Terjadwal
+                  </strong>
                   <span>{lastBookedVisit.scheduledLabel || 'Halaman Visit Schedule aktif'}</span>
                 </div>
               </div>
@@ -666,7 +672,7 @@ export function SmartKosAiSidebar({
                   onClick={() => runVoiceSearchPipeline(utterance)}
                   data-testid="voice-quick-utterance-btn"
                 >
-                  🎙️ &ldquo;{utterance}&rdquo;
+                  &ldquo;{utterance}&rdquo;
                 </button>
               ))}
             </div>
