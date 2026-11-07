@@ -60,6 +60,10 @@ const PAGE_LABELS = {
 const SCHEDULE_INTENT_RE =
   /\b(jadwal\w*|janji\s*temu|survei|survey|booking|book|kunjung\w*|ganti\s*jam|ubah\s*jam|undur|reschedule|batal\w*|visit|kalender|calendar|jam\s*berapa|tanggal\s*berapa|hari\s*apa)\b/i;
 
+// Permintaan eksplisit dari pengguna untuk membuka / melihat tampilan peta
+const EXPLICIT_MAP_INTENT_RE =
+  /\b(buka\s*(peta|maps?)|tampil\w*\s*(di\s*)?(peta|maps?)|lihat\s*(di\s*)?(peta|maps?)|tunjuk\w*\s*(di\s*)?(peta|maps?)|ke\s*(halaman\s*)?(peta|maps?)|arah\w*\s*(ke\s*)?(peta|maps?))\b/i;
+
 function pickLocalBestKos(promptText, catalog = []) {
   if (!Array.isArray(catalog) || catalog.length === 0) return null;
   const lower = String(promptText || '').toLowerCase();
@@ -257,11 +261,11 @@ export const DashboardPage = ({
     setSurveyBookings((prev) => [booking, ...prev.filter((b) => b.id !== booking.id)]);
   }, []);
 
-  const focusKosOnMap = useCallback((kosTarget, { switchToMap = true } = {}) => {
+  const focusKosOnMap = useCallback((kosTarget, { switchToMap = false } = {}) => {
     if (!kosTarget) return;
     lastToolRedirectAtRef.current = Date.now();
     setSmartKosFocusTarget({ ...kosTarget, _focusNonce: Date.now() });
-    if (switchToMap) {
+    if (switchToMap || activeNavRef.current === 'discovery') {
       setActiveNav('discovery');
     }
   }, []);
@@ -297,7 +301,9 @@ export const DashboardPage = ({
       }
 
       if (action.type === 'focus_map' && action.targetKos) {
-        focusKosOnMap(action.targetKos);
+        // Hanya ganti halaman ke peta jika ada perintah eksplisit atau pengguna memang sedang di peta
+        const shouldSwitch = Boolean(action.explicitNav || activeNavRef.current === 'discovery');
+        focusKosOnMap(action.targetKos, { switchToMap: shouldSwitch });
         return action.targetKos;
       }
 
@@ -472,7 +478,10 @@ export const DashboardPage = ({
                 handleCatalogLoaded(redirectPayload.matchedAccommodations);
               }
               if (redirectPayload?.targetKos) {
-                focusKosOnMap(redirectPayload.targetKos);
+                const shouldSwitch = Boolean(
+                  EXPLICIT_MAP_INTENT_RE.test(trimmed) || activeNavRef.current === 'discovery'
+                );
+                focusKosOnMap(redirectPayload.targetKos, { switchToMap: shouldSwitch });
               }
               onRedirect?.(redirectPayload);
               patchGlobalMessage(assistantTurnId, () => ({
@@ -505,7 +514,10 @@ export const DashboardPage = ({
 
         const localBest = pickLocalBestKos(trimmed, catalogRef.current);
         if (localBest) {
-          focusKosOnMap(localBest);
+          const shouldSwitch = Boolean(
+            EXPLICIT_MAP_INTENT_RE.test(trimmed) || activeNavRef.current === 'discovery'
+          );
+          focusKosOnMap(localBest, { switchToMap: shouldSwitch });
           onRedirect?.({ targetKos: localBest, matchedAccommodations: [localBest] });
         }
         const fallbackText = localBest
@@ -644,13 +656,13 @@ export const DashboardPage = ({
 
       if (resolved.length === 0) return null;
       const top = resolved[0];
-      focusKosOnMap(top);
+      focusKosOnMap(top, { switchToMap: activeNavRef.current === 'discovery' });
       setGlobalAiMessages((prev) => [
         ...prev,
         {
           id: `gx-rt-match-${Date.now()}`,
           role: 'assistant',
-          text: `Peta diarahkan ke **${top.name}** (${top.price}, ${top.distance}).`,
+          text: `Rekomendasi hunian: **${top.name}** (${top.price}, ${top.distance}). Anda dapat mengklik kartu kos di bawah atau meminta "buka peta" untuk melihat lokasinya di peta.`,
           isStreaming: false,
           orbState: 'idle',
           orbVariant: 'default',
@@ -718,7 +730,29 @@ export const DashboardPage = ({
           name: booking.accommodationName,
           address: booking.address,
         },
+        { switchToMap: true },
       );
+    },
+    [focusKosOnMap],
+  );
+
+  const handleCuratedKosMapClick = useCallback(
+    (spotlight) => {
+      if (!spotlight) return;
+      const q = String(spotlight.query || spotlight.title || '').toLowerCase();
+      const matched =
+        catalogRef.current.find(
+          (k) =>
+            k.name.toLowerCase().includes(q) ||
+            q.includes(k.name.toLowerCase()) ||
+            k.campusId === spotlight.campusId,
+        ) || {
+          id: `curated-${Date.now()}`,
+          name: spotlight.title,
+          campusId: spotlight.campusId || 'telkom',
+          description: spotlight.copy,
+        };
+      focusKosOnMap(matched, { switchToMap: true });
     },
     [focusKosOnMap],
   );
@@ -860,7 +894,7 @@ export const DashboardPage = ({
             </div>
 
             <div className="bento-bottom-grid">
-              <CuratedKosCard />
+              <CuratedKosCard onOpenKosInMap={handleCuratedKosMapClick} />
               <BudgetMeterCard />
               <ProximityWaveCard onOpenMaps={() => setActiveNav('discovery')} />
             </div>
@@ -1072,7 +1106,7 @@ export const DashboardPage = ({
           messages={globalAiMessages}
           isStreaming={globalIsStreaming}
           activeStatus={globalOrbStatus}
-          onSelectKos={(kos) => focusKosOnMap(kos)}
+          onSelectKos={(kos) => focusKosOnMap(kos, { switchToMap: true })}
           onOpenSchedule={handleOpenScheduleFromAnywhere}
           composerValue={globalComposerText}
           onComposerChange={setGlobalComposerText}

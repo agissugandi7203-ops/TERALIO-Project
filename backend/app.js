@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import routes from './api/routes.js';
+import docsRouter, { swaggerSpec } from './docs/swaggerRouter.js';
 import { config } from './config/env.js';
 import { securityHeaders } from './middleware/security.js';
 import { redact } from './utils/logger.js';
@@ -48,6 +49,12 @@ app.use(aiAttachmentPaths, express.json({ limit: config.http.uploadLimit }));
 
 app.use(express.json({ limit: config.http.jsonLimit }));
 app.use(express.urlencoded({ extended: true, limit: config.http.jsonLimit }));
+
+// Swagger UI & OpenAPI Specification (Tersedia di /docs dan /api/docs)
+app.use('/api/docs', docsRouter);
+app.use('/docs', docsRouter);
+app.get('/openapi.json', (req, res) => res.json(swaggerSpec));
+app.get('/api/openapi.json', (req, res) => res.json(swaggerSpec));
 
 // API Routes (Mendukung akses /api/* secara lokal maupun saat di-rewrite oleh Vercel)
 app.use('/api', routes);

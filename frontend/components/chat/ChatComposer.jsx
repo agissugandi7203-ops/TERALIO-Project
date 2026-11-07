@@ -53,7 +53,7 @@ export function ChatComposer({
   onSelectFiles,
   onRemoveAttachment,
   isStreaming = false,
-  placeholder = 'Tanya TERALIO...',
+  placeholder = 'Tanya Teralio...',
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const textareaRef = useRef(null);
@@ -301,7 +301,7 @@ export function ChatComposer({
             onChange={(e) => onChange?.(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            aria-label="Tulis pesan untuk TERALIO"
+            aria-label="Tulis pesan untuk Teralio"
             className="composer-textarea"
             data-testid="chat-composer-input"
           />

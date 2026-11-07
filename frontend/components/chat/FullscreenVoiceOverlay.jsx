@@ -200,11 +200,11 @@ export function FullscreenVoiceOverlay({
       className="voice-fullscreen-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="TERALIO Voice Conversation"
+      aria-label="Teralio Voice Conversation"
       data-testid="fullscreen-voice-overlay"
     >
       <div className="voice-fullscreen__topbar">
-        <span className="voice-fullscreen__brand">TERALIO Voice</span>
+        <span className="voice-fullscreen__brand">Teralio Voice</span>
         <button
           type="button"
           className="voice-fullscreen__close-btn"

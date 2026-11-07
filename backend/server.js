@@ -5,6 +5,8 @@ const PORT = config.port;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 Express Backend running on http://localhost:${PORT}`);
+  console.log(`📌 Swagger API Docs: http://localhost:${PORT}/api/docs`);
+  console.log(`📌 OpenAPI Spec JSON: http://localhost:${PORT}/api/openapi.json`);
   console.log(`📌 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📌 Integrations status: http://localhost:${PORT}/api/integrations/status`);
 });

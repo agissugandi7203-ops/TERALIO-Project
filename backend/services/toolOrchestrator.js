@@ -105,6 +105,7 @@ const LOCAL_TOOLS = [
               nav: 'discovery',
               campusId: supaSearch.campusId,
               targetKos: supaSearch.primaryMatch,
+              explicitNav: false,
             }
           : null,
       };
@@ -132,6 +133,7 @@ const LOCAL_TOOLS = [
               nav: 'discovery',
               campusId: item.campusId || null,
               targetKos: item,
+              explicitNav: false,
             }
           : null,
       };
@@ -145,7 +147,7 @@ const LOCAL_TOOLS = [
     exposeInRealtime: true,
     exposeInMcp: true,
     description:
-      'Mengarahkan kamera peta interaktif Smart Kos dan membuka kartu Overview Lokasi secara langsung ke kos atau area kampus tertentu. WAJIB dipanggil setiap kali pengguna berpindah menanyakan kos lain atau meminta melihat lokasi suatu kos di peta.',
+      'Mengarahkan kamera peta interaktif Smart Kos dan membuka kartu Overview Lokasi secara langsung ke kos atau area kampus tertentu saat diminta melihat di peta.',
     schema: z.object({
       accommodationId: z
         .string()
@@ -175,6 +177,7 @@ const LOCAL_TOOLS = [
           nav: 'discovery',
           campusId: kos.campusId,
           targetKos: kos,
+          explicitNav: true,
         },
       };
     },

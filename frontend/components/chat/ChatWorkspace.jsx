@@ -436,7 +436,7 @@ export function ChatWorkspace({
                   statusLabel: null,
                   error:
                     err?.message ||
-                    'Tidak dapat terhubung ke layanan AI TERALIO. Silakan periksa koneksi atau konfigurasi API.',
+                    'Tidak dapat terhubung ke layanan AI Teralio. Silakan periksa koneksi atau konfigurasi API.',
                 }
               : m,
           ),

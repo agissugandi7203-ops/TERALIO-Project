@@ -11,30 +11,40 @@ const CURATED_SPOTLIGHTS = [
     title: 'Experience Quiet Nights at Kos Harmoni',
     badge: 'Quiet Study',
     copy: 'Peaceful acoustic-insulated rooms 650m from Telkom University. Private bathroom, 100 Mbps fiber Wi-Fi, and late-night study desk.',
+    query: 'Kos Harmoni',
+    campusId: 'telkom',
   },
   {
     title: 'Experience the Comfort of Deep-Focus Living',
     badge: 'Deep Focus',
     copy: 'Discover verified student residences curated for restful nights and zero noise disruption. Wake up refreshed 8 minutes from campus.',
+    query: 'Pondok UTB',
+    campusId: 'utb',
   },
   {
     title: 'Smart Furnished Studio at Sukapura Loft',
     badge: 'Furnished',
     copy: 'Move-in ready room at Rp1.350.000/mo with en-suite water heater, smart card security, and free communal pantry access.',
+    query: 'Sukapura Loft',
+    campusId: 'telkom',
   },
   {
     title: 'Green Courtyard Living at Bojongsoang Suites',
     badge: 'Eco Breezy',
     copy: 'Sunlit cross-ventilated rooms surrounded by lush courtyard trees, dedicated bike shelter, and 24-hour CCTV protection.',
+    query: 'Bojongsoang',
+    campusId: 'telkom',
   },
   {
     title: 'Budget-Smart Residence at Dayeuhkolot Hub',
     badge: 'Best Value',
     copy: 'All-inclusive Rp1.150.000/mo student room with electricity included, laundry pickup point, and 5-minute walk to campus gate.',
+    query: 'Dayeuhkolot',
+    campusId: 'telkom',
   },
 ];
 
-export const CuratedKosCard = () => {
+export const CuratedKosCard = ({ onOpenKosInMap } = {}) => {
   const [index, setIndex] = useState(1); // Starts on 2/5 just like reference!
   const total = CURATED_SPOTLIGHTS.length;
   const current = CURATED_SPOTLIGHTS[index];
@@ -64,7 +74,12 @@ export const CuratedKosCard = () => {
 
         <h3 className="curated-card__title">{current.title}</h3>
 
-        <div className="curated-card__callout">
+        <div
+          className="curated-card__callout"
+          style={{ cursor: onOpenKosInMap ? 'pointer' : 'default' }}
+          onClick={() => onOpenKosInMap?.(current)}
+          title={onOpenKosInMap ? 'Klik untuk langsung melihat di peta' : undefined}
+        >
           <span className="curated-card__badge">
             <span aria-hidden="true">🌙</span>
             <span>{current.badge}</span>
@@ -74,8 +89,35 @@ export const CuratedKosCard = () => {
       </div>
 
       <div className="curated-card__footer">
-        <div className="curated-card__counter" data-testid="curated-counter">
-          <strong>{index + 1}</strong>/{total}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="curated-card__counter" data-testid="curated-counter">
+            <strong>{index + 1}</strong>/{total}
+          </div>
+          {onOpenKosInMap && (
+            <button
+              type="button"
+              className="curated-card__map-pill"
+              onClick={() => onOpenKosInMap(current)}
+              data-testid="curated-open-map-btn"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: '#2563eb',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '999px',
+                padding: '3px 8px',
+                cursor: 'pointer',
+              }}
+              title="Lihat kos ini langsung di peta"
+            >
+              <span>Lihat di Peta</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          )}
         </div>
 
         <div className="carousel-arrows">
