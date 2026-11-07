@@ -199,7 +199,10 @@ export const authApi = {
           };
         }
       } catch (err) {
-        console.warn(`[authApi] Supabase client OAuth (${prov}) fallback:`, err.message);
+        console.warn(`[authApi] Supabase client OAuth (${prov}) error:`, err.message);
+        throw new Error(
+          `Login ${provider} belum aktif di Supabase Dashboard. Masukkan Client ID & Secret di menu Authentication > Providers > ${provider}.`
+        );
       }
     }
 
@@ -211,25 +214,18 @@ export const authApi = {
 
     try {
       const res = await fetch(endpoint);
-      return await parseJsonResponse(res);
-    } catch {
-      // 3. Fallback dev simulator jika backend offline
-      return {
-        source: 'local-fallback',
-        provider: prov,
-        note: `Simulasi URL OAuth ${provider}. Kredensial Supabase aktif di produksi.`,
-        data: {
-          provider: prov,
-          url:
-            prov === 'google'
-              ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=simulated&redirect_uri=${encodeURIComponent(
-                  targetRedirect
-                )}&response_type=code`
-              : `https://github.com/login/oauth/authorize?client_id=simulated&redirect_uri=${encodeURIComponent(
-                  targetRedirect
-                )}`,
-        },
-      };
+      const parsed = await parseJsonResponse(res);
+      if (parsed?.data?.url && !parsed.data.url.includes('simulated')) {
+        return parsed;
+      }
+      throw new Error(
+        `Login ${provider} belum dikonfigurasi di Supabase Dashboard. Masukkan Client ID & Secret di Authentication > Providers > ${provider}.`
+      );
+    } catch (fetchErr) {
+      throw new Error(
+        fetchErr.message ||
+          `Login ${provider} belum dikonfigurasi di Supabase Dashboard. Silakan aktifkan di menu Authentication > Providers.`
+      );
     }
   },
 
