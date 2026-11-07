@@ -210,6 +210,9 @@ export function SmartKosAiSidebar({
               latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'user', text: ev.text });
             } else if (ev.delta) {
               setLiveTranscript((prev) => `${prev}${ev.delta}`);
+            } else if (ev.text) {
+              // Menampilkan transkripsi suara lokal secara real-time langsung saat pengguna berbicara
+              setLiveTranscript(ev.text);
             }
           } else if (ev.role === 'assistant' && ev.final && ev.text) {
             latestPropsRef.current.onVoiceRealtimeTurn?.({ role: 'assistant', text: ev.text });

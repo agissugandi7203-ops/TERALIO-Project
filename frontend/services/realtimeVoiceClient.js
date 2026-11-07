@@ -81,17 +81,17 @@ export class RealtimeVoiceClient {
     this.isGreetingPhase = false;
     this.greetingMuteTimeout = null;
 
-    // Half-duplex gate: mikrofon ditahan selama giliran AI (berpikir + berbicara)
-    // agar noise ruangan / pantulan speaker tidak memotong jawaban AI.
-    this.aiTurnGate = false;
+    // Barge-in (Interupsi Suara): Mikrofon tetap aktif dua arah dengan WebRTC Echo Cancellation.
+    // Saat pengguna mulai bicara di tengah giliran AI, AI langsung berhenti berbicara dan mendengarkan.
     this.audioStartedThisTurn = false;
     this.responseDoneThisTurn = false;
-    this.gateReleaseTimer = null;
-    this.gateHardCapTimer = null;
-    this.aiAnalyserProvedWorking = false;
-    this.aiSilentSince = 0;
     this.asstPacer = null;
     this.asstPacerTimer = null;
+
+    // Transkripsi lokal instan berbasis Web Speech API (speech-to-text di browser)
+    this.localSpeechRec = null;
+    this.latestLocalTranscript = '';
+    this.lastServerUserTranscript = '';
   }
 
   emitState(statePatch) {
@@ -101,60 +101,122 @@ export class RealtimeVoiceClient {
 
   applyMicState() {
     if (!this.localStream) return;
-    const enabled = !this.disposed && !this.isMuted && !this.aiTurnGate;
+    const enabled = !this.disposed && !this.isMuted;
     for (const track of this.localStream.getAudioTracks()) {
       track.enabled = enabled;
     }
   }
 
-  clearGateTimers() {
-    if (this.gateReleaseTimer) {
-      clearTimeout(this.gateReleaseTimer);
-      this.gateReleaseTimer = null;
-    }
-    if (this.gateHardCapTimer) {
-      clearTimeout(this.gateHardCapTimer);
-      this.gateHardCapTimer = null;
-    }
-  }
-
-  engageAiTurnGate() {
-    this.clearGateTimers();
-    this.aiTurnGate = true;
-    this.audioStartedThisTurn = false;
-    this.responseDoneThisTurn = false;
-    this.aiSilentSince = 0;
-    this.applyMicState();
-    // Pengaman: jangan pernah menahan mikrofon lebih dari 45 detik
-    this.gateHardCapTimer = setTimeout(() => this.releaseAiTurnGate(0), 45_000);
-  }
-
-  releaseAiTurnGate(delayMs = 0) {
-    if (!this.aiTurnGate) return;
-    const doRelease = () => {
-      this.clearGateTimers();
-      if (!this.aiTurnGate) return;
-      this.aiTurnGate = false;
-      this.audioStartedThisTurn = false;
-      this.responseDoneThisTurn = false;
-      this.isAiSpeaking = false;
-      this.applyMicState();
-      if (!this.disposed && this.isConnected) {
-        this.emitState({
-          phase: 'listening',
-          orbState: 'idle',
-          variant: 'blink',
-          speed: 1.05,
-          paused: false,
-          label: this.isMuted ? 'Mikrofon dibisukan' : 'Mendengarkan Anda...',
-        });
+  // Menghentikan audio AI seketika saat pengguna melakukan interupsi (barge-in)
+  interruptPlaybackOnly() {
+    this.isAiSpeaking = false;
+    if (this.audioEl) {
+      try {
+        this.audioEl.pause?.();
+        this.audioEl.currentTime = 0;
+      } catch {
+        // ignore
       }
-    };
-    if (delayMs > 0) {
-      if (this.gateReleaseTimer) clearTimeout(this.gateReleaseTimer);
-      this.gateReleaseTimer = setTimeout(doRelease, delayMs);
-    } else {
-      doRelease();
+    }
+    this.sendClientEvent({ type: 'output_audio_buffer.clear' });
+    this.sendClientEvent({ type: 'response.cancel' });
+    this.flushAssistantTranscript();
+  }
+
+  // Menjalankan Web Speech API lokal di browser untuk auto voice-to-text instan & barge-in detection
+  startLocalSpeechRecognition() {
+    if (typeof window === 'undefined') return;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) return;
+
+    this.stopLocalSpeechRecognition();
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'id-ID';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+
+      rec.onspeechstart = () => {
+        if (this.disposed || this.isMuted) return;
+        if (this.isAiSpeaking) {
+          this.interruptPlaybackOnly();
+        }
+        this.emitState({
+          phase: 'user_speaking',
+          orbState: 'idle',
+          variant: 'default',
+          speed: 1.35,
+          paused: false,
+          label: 'Mendengarkan ucapan Anda...',
+        });
+      };
+
+      rec.onresult = (event) => {
+        if (this.disposed || this.isMuted) return;
+        if (this.isAiSpeaking) {
+          this.interruptPlaybackOnly();
+        }
+
+        let interim = '';
+        let finalChunk = '';
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const res = event.results[i];
+          const t = res[0]?.transcript || '';
+          if (res.isFinal) {
+            finalChunk += t;
+          } else {
+            interim += t;
+          }
+        }
+
+        const liveText = (finalChunk || interim).trim();
+        if (liveText) {
+          this.latestLocalTranscript = liveText;
+          // Kirim teks transkripsi lokal ke UI seketika agar pengguna melihat apa yang diucapkannya
+          this.onTranscript?.({
+            role: 'user',
+            itemId: 'user_live_speech',
+            text: liveText,
+            final: false,
+          });
+        }
+      };
+
+      rec.onerror = () => {
+        // Event error seperti 'no-speech' atau 'aborted' wajar terjadi pada Web Speech API
+      };
+
+      rec.onend = () => {
+        if (!this.disposed && this.isConnected && !this.isMuted) {
+          try {
+            rec.start();
+          } catch {
+            // abaikan jika sudah aktif
+          }
+        }
+      };
+
+      rec.start();
+      this.localSpeechRec = rec;
+    } catch {
+      // Browser tidak mendukung Web Speech API atau izin dibatasi
+    }
+  }
+
+  stopLocalSpeechRecognition() {
+    if (this.localSpeechRec) {
+      try {
+        this.localSpeechRec.abort?.();
+      } catch {
+        try {
+          this.localSpeechRec.stop?.();
+        } catch {
+          // ignore
+        }
+      }
+      this.localSpeechRec = null;
     }
   }
 
@@ -195,11 +257,8 @@ export class RealtimeVoiceClient {
     void autoGreet;
     this.shouldAutoGreet = false;
     this.hasSentInitialGreeting = false;
-    this.aiTurnGate = false;
     this.audioStartedThisTurn = false;
     this.responseDoneThisTurn = false;
-    this.aiAnalyserProvedWorking = false;
-    this.clearGateTimers();
 
     if (
       typeof navigator === 'undefined' ||
@@ -266,18 +325,17 @@ export class RealtimeVoiceClient {
 
     try {
       // 1. Minta ephemeral client secret dari backend (tanpa mengekspos OPENAI_API_KEY)
-      // server_vad seimbang: threshold 0.6 (suara normal terdeteksi), jeda 800ms, prefix 400ms,
-      // + noise reduction far_field (mic laptop di ruangan ramai). Noise/echo saat AI bicara
-      // ditangani oleh half-duplex gate di client sehingga jawaban AI tidak terpotong.
+      // server_vad optimal untuk Barge-In (Interupsi Suara): threshold 0.58, jeda 800ms, prefix 400ms,
+      // dengan echoCancellation aktif sehingga suara pengguna langsung memotong suara AI saat bicara.
       const tokenRes = await fetch('/api/realtime/client-secrets', {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           turnDetection: 'server_vad',
-          vadThreshold: 0.6,
+          vadThreshold: 0.58,
           vadSilenceDurationMs: 800,
           vadPrefixPaddingMs: 400,
-          noiseReduction: 'far_field',
+          noiseReduction: 'near_field',
           reasoningEffort: reasoningEffort === 'high' ? 'high' : 'low',
           enableTools: true,
           ...(voice ? { voice } : {}),
@@ -442,6 +500,7 @@ export class RealtimeVoiceClient {
       }
 
       this.isConnected = true;
+      this.startLocalSpeechRecognition();
       this.emitState({
         phase: 'listening',
         orbState: 'idle',
@@ -483,24 +542,9 @@ export class RealtimeVoiceClient {
 
       const sampleFrame = () => {
         if (this.disposed) return;
-        const micLevel = this.isMuted || this.aiTurnGate ? 0 : computeRmsLevel(this.micAnalyser, micBuf);
+        const micLevel = this.isMuted ? 0 : computeRmsLevel(this.micAnalyser, micBuf);
         const aiLevel = computeRmsLevel(this.aiAnalyser, aiBuf);
         this.onAudioLevels?.({ micLevel, aiLevel });
-
-        // Fallback pelepasan gate: bila analyser AI terbukti aktif dan audio AI sudah hening
-        // selama 1.2 detik setelah response.done, buka kembali mikrofon.
-        if (aiLevel > 0.06) {
-          this.aiAnalyserProvedWorking = true;
-          this.aiSilentSince = 0;
-        } else if (this.aiTurnGate && this.responseDoneThisTurn && this.aiAnalyserProvedWorking) {
-          const now = Date.now();
-          if (!this.aiSilentSince) this.aiSilentSince = now;
-          if (now - this.aiSilentSince > 1200) {
-            this.aiSilentSince = 0;
-            this.releaseAiTurnGate(0);
-          }
-        }
-
         this.rafId = requestAnimationFrame(sampleFrame);
       };
 
@@ -562,7 +606,7 @@ export class RealtimeVoiceClient {
     switch (event.type) {
       case 'session.created':
       case 'session.updated':
-        if (!this.isAiSpeaking && !this.aiTurnGate) {
+        if (!this.isAiSpeaking) {
           this.emitState({
             phase: 'listening',
             orbState: 'idle',
@@ -575,7 +619,9 @@ export class RealtimeVoiceClient {
         break;
 
       case 'input_audio_buffer.speech_started':
-        if (this.aiTurnGate) break;
+        if (this.isAiSpeaking) {
+          this.interruptPlaybackOnly();
+        }
         this.emitState({
           phase: 'user_speaking',
           orbState: 'idle',
@@ -588,7 +634,6 @@ export class RealtimeVoiceClient {
 
       case 'input_audio_buffer.speech_stopped':
       case 'input_audio_buffer.committed':
-        if (this.aiTurnGate) break;
         this.emitState({
           phase: 'processing_voice',
           orbState: 'reasoning',
@@ -612,6 +657,8 @@ export class RealtimeVoiceClient {
 
       case 'conversation.item.input_audio_transcription.completed':
         if (event.transcript && event.transcript.trim()) {
+          this.lastServerUserTranscript = event.transcript.trim();
+          this.latestLocalTranscript = '';
           this.onTranscript?.({
             role: 'user',
             itemId: event.item_id || `user_${Date.now()}`,
@@ -622,8 +669,17 @@ export class RealtimeVoiceClient {
         break;
 
       case 'response.created':
-        // Giliran AI dimulai: tahan mikrofon agar noise/echo tidak memotong jawaban
-        this.engageAiTurnGate();
+        // Jika transkripsi server belum tiba saat giliran AI dimulai, fallback ke transkrip lokal browser
+        if (this.latestLocalTranscript && !this.lastServerUserTranscript) {
+          this.onTranscript?.({
+            role: 'user',
+            itemId: `user_local_${Date.now()}`,
+            text: this.latestLocalTranscript,
+            final: true,
+          });
+          this.latestLocalTranscript = '';
+        }
+        this.lastServerUserTranscript = '';
         this.emitState({
           phase: 'ai_thinking',
           orbState: 'reasoning',
@@ -703,19 +759,8 @@ export class RealtimeVoiceClient {
       case 'response.done': {
         this.responseDoneThisTurn = true;
         const status = event.response?.status;
-        const outputs = Array.isArray(event.response?.output) ? event.response.output : [];
-        const hasFunctionCall = outputs.some((o) => o?.type === 'function_call');
         if (!this.audioStartedThisTurn || status === 'cancelled' || status === 'failed') {
-          // Tidak ada audio (mis. hanya pemanggilan tool) → tampilkan teks & buka mic segera.
-          // Untuk function call, respons lanjutan akan segera dibuat oleh relay tool.
           this.flushAssistantTranscript();
-          if (!hasFunctionCall) {
-            this.releaseAiTurnGate(0);
-          } else {
-            // Pengaman bila relay tool gagal membuat respons lanjutan
-            if (this.gateReleaseTimer) clearTimeout(this.gateReleaseTimer);
-            this.gateReleaseTimer = setTimeout(() => this.releaseAiTurnGate(0), 20_000);
-          }
         }
         break;
       }
@@ -723,14 +768,11 @@ export class RealtimeVoiceClient {
       case 'output_audio_buffer.stopped':
         this.isAiSpeaking = false;
         this.flushAssistantTranscript();
-        // Jeda singkat agar sisa gema speaker tidak terekam sebagai ucapan pengguna
-        this.releaseAiTurnGate(350);
         break;
 
       case 'output_audio_buffer.cleared':
         this.isAiSpeaking = false;
         this.flushAssistantTranscript();
-        this.releaseAiTurnGate(0);
         this.emitState({
           phase: 'interrupted',
           orbState: 'idle',
@@ -783,7 +825,7 @@ export class RealtimeVoiceClient {
     }
     this.asstPacer.finalText = text;
     // Bila audio sudah selesai/tidak ada audio, langsung tampilkan final
-    if (!this.aiTurnGate || (!this.audioStartedThisTurn && this.responseDoneThisTurn)) {
+    if (!this.isAiSpeaking || (!this.audioStartedThisTurn && this.responseDoneThisTurn)) {
       this.flushAssistantTranscript();
     }
   }
@@ -894,7 +936,12 @@ export class RealtimeVoiceClient {
   setMuted(muted) {
     this.isMuted = Boolean(muted);
     this.applyMicState();
-    if (this.isConnected && !this.isAiSpeaking && !this.aiTurnGate) {
+    if (this.isMuted) {
+      this.stopLocalSpeechRecognition();
+    } else if (this.isConnected) {
+      this.startLocalSpeechRecognition();
+    }
+    if (this.isConnected && !this.isAiSpeaking) {
       this.emitState({
         phase: 'listening',
         orbState: 'idle',
@@ -907,12 +954,7 @@ export class RealtimeVoiceClient {
   }
 
   interrupt() {
-    this.sendClientEvent({ type: 'response.cancel' });
-    this.sendClientEvent({ type: 'output_audio_buffer.clear' });
-    this.isAiSpeaking = false;
-    this.flushAssistantTranscript();
-    // Buka mikrofon segera agar pengguna bisa langsung berbicara
-    this.releaseAiTurnGate(0);
+    this.interruptPlaybackOnly();
     this.emitState({
       phase: 'interrupted',
       orbState: 'idle',
@@ -924,11 +966,13 @@ export class RealtimeVoiceClient {
   }
 
   cleanupResources() {
+    this.flushAssistantTranscript();
     this.disposed = true;
     this.isConnected = false;
     this.isAiSpeaking = false;
-    this.clearGateTimers();
-    this.aiTurnGate = false;
+    this.stopLocalSpeechRecognition();
+    this.latestLocalTranscript = '';
+    this.lastServerUserTranscript = '';
     this.stopTranscriptPacer();
     this.asstPacer = null;
     if (this.greetingMuteTimeout) {

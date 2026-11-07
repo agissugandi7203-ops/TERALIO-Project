@@ -101,6 +101,9 @@ export function FullscreenVoiceOverlay({
           const updated = prevText + delta;
           draftTranscriptMapRef.current.set(itemId, updated);
           setLiveCaption(updated);
+        } else if (text) {
+          draftTranscriptMapRef.current.set(itemId, text);
+          setLiveCaption(text);
         }
       },
       onRecommendations: (recPayload) => {
