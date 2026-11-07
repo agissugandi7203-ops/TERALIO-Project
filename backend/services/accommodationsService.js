@@ -455,6 +455,31 @@ export function calculateStudentBudgetBreakdown(kosItem) {
   };
 }
 
+/**
+ * Menentukan apakah pesan pengguna memiliki niat pencarian kos/hunian nyata,
+ * atau sekadar sapaan pertama / obrolan pembuka (agar kamera peta tetap diam).
+ */
+export function isAccommodationSearchIntent(message = '') {
+  if (typeof message !== 'string') return false;
+  const raw = message.trim().toLowerCase();
+  if (!raw) return false;
+
+  // Pola sapaan pembuka / obrolan santai / cek bot yang tidak meminta pencarian kos spesifik
+  // Contoh: "halo", "hai", "selamat pagi", "p", "oy", "tes", "siapa kamu", "apa kabar"
+  const GREETING_ONLY_RE =
+    /^(halo|hai|hi|hello|hei|hey|oy|p|assalamu['’]?alaikum|selamat\s+(pagi|siang|sore|malam)|tes|test|halo\s+teralio|teralio|bot|siapa\s+kamu|kamu\s+siapa|kamu\s+bisa\s+apa|apa\s+yang\s+bisa\s+kamu\s+lakukan|ada\s+orang|info|help|bantuan|apa\s+kabar)[\s.?!]*$/i;
+
+  if (GREETING_ONLY_RE.test(raw)) {
+    return false;
+  }
+
+  // Kata kunci eksplisit pencarian hunian, kos, kampus, lokasi, atau fasilitas
+  const SEARCH_KEYWORDS_RE =
+    /\b(kos|kost|kontrakan|kamar|asrama|penginapan|hunian|boarding|dorm|sewa|telkom|utb|itb|ui|ugm|bandung|depok|jogja|yogyakarta|sukapura|sukabirus|bojongsoang|dayeuhkolot|buahbatu|ciganitri|survei|survey|booking|jadwal|visit|kunjungan|murah|budget|fasilitas|ac|wifi|kamar mandi|putra|putri|campur|rekomendasi|rekomendasikan|carikan|cari|dekat)\b/i;
+
+  return SEARCH_KEYWORDS_RE.test(raw);
+}
+
 export const accommodationsService = {
   /**
    * Mengambil seluruh data kos dari tabel `public.accommodations` di Supabase,
@@ -767,6 +792,45 @@ export const accommodationsService = {
 
     const startTime = Date.now();
     const isDeepThinking = reasoningEffort === 'high' || reasoningEffort === 'xhigh';
+
+    // Cek apakah pesan pengguna merupakan pencarian kos/hunian nyata atau sapaan/percakapan awal
+    const isSearchIntent = isAccommodationSearchIntent(message);
+
+    if (!isSearchIntent) {
+      // Sapaan pertama langsung cepat & to the point: kamera peta TETAP DIAM
+      // JANGAN emit redirect_location dan JANGAN emit rekomendasi kos tanpa permintaan
+      emit('status', {
+        orbState: 'idle',
+        variant: 'default',
+        step: 'ready',
+        label: 'Teralio AI Living Assistant siap membantu',
+      });
+
+      const fastGreeting = 'Halo! Ada yang bisa saya bantu?';
+      emit('text_delta', { delta: fastGreeting });
+
+      const durationMs = Date.now() - startTime;
+      const resolvedCampus = CAMPUS_HUBS_DATA[campusId] || CAMPUS_HUBS_DATA.telkom;
+      const donePayload = {
+        campusId: resolvedCampus.id,
+        campus: resolvedCampus,
+        matchedAccommodations: [],
+        outputText: fastGreeting,
+        voiceSummary: fastGreeting,
+        aiEngine: 'fast-greeting',
+        isSearchIntent: false,
+        metrics: {
+          durationMs,
+          matchedCount: 0,
+          source: 'fast-greeting',
+          aiEngine: 'fast-greeting',
+          isSearchIntent: false,
+        },
+      };
+
+      emit('done', donePayload);
+      return donePayload;
+    }
 
     // Step 1: Reasoning / Analisis Kriteria
     emit('status', {

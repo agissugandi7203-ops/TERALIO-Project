@@ -142,6 +142,37 @@ describe('Smart Kos Match — Supabase Mapping, Dynamic Search, SSE Redirect, & 
     expect(doneFrame.data.voiceSummary).toContain('Cisitu Indah Smart Kost');
   });
 
+  it('POST /api/accommodations/ai-search/stream saat pengguna hanya menyapa (halo/hai) tidak mengarahkan kamera (tanpa redirect_location) dan langsung menyapa cepat', async () => {
+    const res = await request(app)
+      .post('/api/accommodations/ai-search/stream')
+      .send({
+        message: 'Halo',
+        campusId: 'telkom',
+        reasoningEffort: 'none',
+        stepDelayMs: 0,
+      });
+
+    expect(res.status).toBe(200);
+    const frames = parseSseFrames(res.text);
+
+    // Pastikan TIDAK ADA event redirect_location dan TIDAK ADA event recommendations
+    const redirectFrame = frames.find((f) => f.event === 'redirect_location');
+    expect(redirectFrame).toBeUndefined();
+
+    const recsFrame = frames.find((f) => f.event === 'recommendations');
+    expect(recsFrame).toBeUndefined();
+
+    // Sapaan pertama langsung cepat & to the point
+    const textDeltaFrames = frames.filter((f) => f.event === 'text_delta');
+    const combinedText = textDeltaFrames.map((f) => f.data.delta).join('');
+    expect(combinedText).toBe('Halo! Ada yang bisa saya bantu?');
+
+    const doneFrame = frames.find((f) => f.event === 'done');
+    expect(doneFrame).toBeDefined();
+    expect(doneFrame.data.outputText).toBe('Halo! Ada yang bisa saya bantu?');
+    expect(doneFrame.data.isSearchIntent).toBe(false);
+  });
+
   it('POST & GET /api/accommodations/bookings menyimpan dan mengembalikan jadwal survei kos secara dinamis', async () => {
     const postRes = await request(app).post('/api/accommodations/bookings').send({
       accommodationId: 'kos-4',

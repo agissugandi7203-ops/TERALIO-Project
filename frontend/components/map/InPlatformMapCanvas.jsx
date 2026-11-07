@@ -18,57 +18,40 @@ export function getGoogleTileUrl(layerType = 'satellite') {
 }
 
 export function getMapTileConfig(layerType = 'satellite') {
-  const isRetina =
-    typeof window !== 'undefined' &&
-    ((window.devicePixelRatio && window.devicePixelRatio >= 1.25) ||
-      (window.matchMedia &&
-        window.matchMedia('(-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi)').matches));
-  const r = isRetina ? '@2x' : '';
-
   if (layerType === 'satellite') {
     return {
       type: 'satellite',
       baseLayers: [
         {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
           options: {
-            maxZoom: 19,
-            maxNativeZoom: 19,
-            minZoom: 4,
-            attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+            maxZoom: 20,
+            maxNativeZoom: 20,
+            minZoom: 3,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps',
             tileSize: 256,
             keepBuffer: 6,
             updateWhenIdle: false,
             updateWhenZooming: true,
           },
         },
-        {
-          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-          options: {
-            maxZoom: 19,
-            maxNativeZoom: 19,
-            minZoom: 4,
-            tileSize: 256,
-            keepBuffer: 6,
-            opacity: 0.92,
-          },
-        },
       ],
     };
   }
 
-  // Roadmap: CartoDB Voyager (High contrast, modern, built for accommodations and campuses)
+  // Roadmap: Google Maps Vector Style Road raster
   return {
     type: 'roadmap',
     baseLayers: [
       {
-        url: `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${r}.png`,
+        url: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
         options: {
           maxZoom: 20,
-          maxNativeZoom: 19,
-          minZoom: 4,
-          subdomains: ['a', 'b', 'c', 'd'],
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+          maxNativeZoom: 20,
+          minZoom: 3,
+          subdomains: ['0', '1', '2', '3'],
+          attribution: '&copy; Google Maps',
           tileSize: 256,
           keepBuffer: 6,
           updateWhenIdle: false,
@@ -77,6 +60,15 @@ export function getMapTileConfig(layerType = 'satellite') {
       },
     ],
   };
+}
+
+function applyTileLayers(tileGroup, layerType) {
+  if (!tileGroup) return;
+  tileGroup.clearLayers();
+  const config = getMapTileConfig(layerType);
+  for (const layer of config.baseLayers) {
+    L.tileLayer(layer.url, layer.options).addTo(tileGroup);
+  }
 }
 
 function formatShortPrice(priceMonthly, priceStr) {
@@ -158,6 +150,9 @@ export function InPlatformMapCanvas({
     overlayGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
+    // Tambahkan layer tiles langsung saat map dibuat (tahan terhadap React StrictMode / remount)
+    applyTileLayers(tileGroupRef.current, mapType);
+
     // Trigger pembaruan ukuran map untuk layout mobile dan transisi tabs
     const initTimer1 = setTimeout(() => {
       try {
@@ -215,18 +210,9 @@ export function InPlatformMapCanvas({
     };
   }, []);
 
-  // 2. Sinkronisasi Layer Satelit Hybrid vs Peta Jalan (Roadmap) dengan dukungan Retina / High-DPI
+  // 2. Sinkronisasi Layer Satelit Hybrid vs Peta Jalan (Roadmap)
   useEffect(() => {
-    const map = mapRef.current;
-    const tileGroup = tileGroupRef.current;
-    if (!map || !tileGroup) return;
-
-    tileGroup.clearLayers();
-
-    const config = getMapTileConfig(mapType);
-    for (const layer of config.baseLayers) {
-      L.tileLayer(layer.url, layer.options).addTo(tileGroup);
-    }
+    applyTileLayers(tileGroupRef.current, mapType);
   }, [mapType]);
 
   // 3. Animasi Kamera Halus (`flyTo`) saat AI mengarahkan ke lokasi kos / kampus berubah / zoom berubah

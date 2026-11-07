@@ -110,7 +110,7 @@ export class RealtimeVoiceClient {
       type: 'response.create',
       response: {
         instructions:
-          'Sapa pengguna secara singkat, ramah, dan natural dalam Bahasa Indonesia (cukup 1-2 kalimat pendek), lalu tanyakan apakah ingin dicarikan kos (misal sekitar UTB, Telkom, atau ITB) atau mengatur jadwal kunjungan survei.',
+          'Sapa pengguna secara sangat singkat dan cepat persis seperti ini: "Halo! Ada yang bisa saya bantu?" Cukup satu kalimat itu saja. JANGAN sebutkan kos dulu, JANGAN panggil tool apapun, dan biarkan kamera peta tetap diam.',
       },
     });
   }
