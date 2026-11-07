@@ -15,38 +15,11 @@ import { smartKosApi } from '../services/smartKosApi.js';
 import { chatApi } from '../services/chatApi.js';
 import { findMentionedKosInText } from '../utils/kosVoiceMatcher.js';
 import { fireConfetti } from '../utils/confetti.js';
+import { CURATED_ACCOMMODATIONS } from '../constants/curatedAccommodations.js';
 import '../styles/dashboard.css';
 import '../styles/smart-kos.css';
 
-const DEFAULT_RECOMMENDED_KOS = [
-  {
-    id: 'kos-1',
-    name: 'Kos Harmoni Sukapura',
-    price: 'Rp1.250.000 / bln',
-    distance: '650m dari Kampus',
-    type: 'Putra / Putri',
-    tag: 'Match 96%',
-    features: ['Kamar Mandi Dalam', 'Wi-Fi 100 Mbps', 'Kasur Springbed', 'Meja Belajar'],
-  },
-  {
-    id: 'kos-2',
-    name: 'Sukapura Loft Residence',
-    price: 'Rp1.350.000 / bln',
-    distance: '820m dari Kampus',
-    type: 'Campur',
-    tag: 'Quiet Area',
-    features: ['Water Heater', 'Smart Lock', 'Balkon', 'Dapur Bersama'],
-  },
-  {
-    id: 'kos-3',
-    name: 'Bojongsoang Green Suites',
-    price: 'Rp1.150.000 / bln',
-    distance: '950m dari Kampus',
-    type: 'Putri',
-    tag: 'Best Value',
-    features: ['Listrik Termasuk', 'CCTV 24 Jam', 'Parkir Motor', 'Laundry'],
-  },
-];
+const DEFAULT_RECOMMENDED_KOS = CURATED_ACCOMMODATIONS;
 
 const PAGE_LABELS = {
   home: 'Home Overview',
@@ -776,11 +749,17 @@ export const DashboardPage = ({
 
   // Filter listings based on search bar
   const query = searchQuery.trim().toLowerCase();
-  const allListings = backendItems.length > 0 ? backendItems : DEFAULT_RECOMMENDED_KOS;
+  const allListings =
+    accommodationsCatalog.length > 0
+      ? accommodationsCatalog
+      : DEFAULT_RECOMMENDED_KOS;
   const filteredListings = query
     ? allListings.filter(
         (item) =>
           (item.name || item.title || '').toLowerCase().includes(query) ||
+          (item.area || '').toLowerCase().includes(query) ||
+          (item.city || '').toLowerCase().includes(query) ||
+          (item.type || '').toLowerCase().includes(query) ||
           (item.distance || item.category || '').toLowerCase().includes(query) ||
           (item.features || []).some((f) => f.toLowerCase().includes(query))
       )
