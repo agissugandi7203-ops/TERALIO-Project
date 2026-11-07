@@ -9,6 +9,7 @@ import ProximityWaveCard from '../components/ProximityWaveCard.jsx';
 import SmartKosMapView from '../components/SmartKosMapView.jsx';
 import ChatWorkspace from '../components/chat/ChatWorkspace.jsx';
 import VisitScheduleView from '../components/schedule/VisitScheduleView.jsx';
+import NotificationsView from '../components/notifications/NotificationsView.jsx';
 import SmartKosAiSidebar from '../components/map/SmartKosAiSidebar.jsx';
 import { smartKosApi } from '../services/smartKosApi.js';
 import { chatApi } from '../services/chatApi.js';
@@ -998,20 +999,10 @@ export const DashboardPage = ({
 
             {/* Notifications View */}
             {activeNav === 'notifications' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ padding: '1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px' }}>
-                  <strong style={{ color: '#166534', fontSize: '0.9rem' }}>🎉 Kamar Baru Tersedia!</strong>
-                  <p style={{ color: '#15803d', fontSize: '0.82rem', marginTop: '2px' }}>
-                    Sukapura Loft membuka 1 kamar lantai 2 (kamar mandi dalam, Rp1.350.000).
-                  </p>
-                </div>
-                <div style={{ padding: '1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '14px' }}>
-                  <strong style={{ color: '#1e40af', fontSize: '0.9rem' }}>⚡ Wi-Fi Speed Verified</strong>
-                  <p style={{ color: '#1d4ed8', fontSize: '0.82rem', marginTop: '2px' }}>
-                    Kos Harmoni telah diverifikasi memiliki kecepatan 100 Mbps fiber optic stabil.
-                  </p>
-                </div>
-              </div>
+              <NotificationsView
+                onNavigate={(nav) => setActiveNav(nav)}
+                onFocusKosOnMap={focusKosOnMap}
+              />
             )}
 
             {/* Settings View */}

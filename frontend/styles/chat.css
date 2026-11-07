@@ -1696,7 +1696,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Responsive Breakpoints (Tablet & Mobile Comfort)
+   Responsive Breakpoints (Desktop, Tablet, Mobile & Extra-Small Devices)
    -------------------------------------------------------------------------- */
 @media (max-width: 1120px) {
   .chat-rec-sidebar {
@@ -1712,13 +1712,15 @@
 
 @media (max-width: 920px) {
   .dash-main.is-chat-mode {
-    padding: 0.65rem;
+    padding: 0.5rem;
+    height: 100dvh;
+    max-height: 100dvh;
   }
 
   .teralio-chat-workspace {
-    min-height: calc(100dvh - 1.3rem);
-    height: calc(100dvh - 1.3rem);
-    border-radius: 24px;
+    min-height: calc(100dvh - 1rem);
+    height: calc(100dvh - 1rem);
+    border-radius: 22px;
   }
 
   .chat-mobile-menu-btn {
@@ -1726,11 +1728,199 @@
   }
 
   .teralio-chat-composer-shell.is-docked {
-    padding: 0.45rem 0.75rem 0.9rem;
+    padding: 0.45rem 0.75rem 0.85rem;
   }
 
   .composer-thinking-btn {
     padding: 0 0.62rem;
+    font-size: 0.76rem;
+  }
+}
+
+/* Smartphone & Compact Screen Fluidity (<= 640px) */
+@media (max-width: 640px) {
+  .dash-main.is-chat-mode {
+    padding: 0.25rem 0.25rem 0 0.25rem;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .teralio-chat-workspace {
+    height: calc(100dvh - 0.5rem);
+    min-height: calc(100dvh - 0.5rem);
+    border-radius: 18px;
+    border-color: #e2e8f0;
+  }
+
+  .teralio-chat-floating-bar {
+    top: 0.65rem;
+    left: 0.65rem;
+    right: 0.65rem;
+  }
+
+  .chat-mobile-menu-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .chat-reopen-sidebar-chip {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.74rem;
+  }
+
+  /* Empty state */
+  .teralio-chat-empty-stage {
+    padding: 1.25rem 0.85rem 2rem;
+  }
+
+  .teralio-chat-empty-title {
+    font-size: clamp(1.3rem, 5.2vw, 1.65rem);
+    line-height: 1.32;
+    margin: 0 0 1.25rem 0;
+  }
+
+  /* Composer card */
+  .teralio-chat-composer-shell.is-centered {
+    width: 100%;
+    padding: 0 0.25rem;
+  }
+
+  .teralio-chat-composer-shell.is-docked {
+    padding: 0.25rem 0.5rem 0.65rem;
+  }
+
+  .teralio-composer {
+    border-radius: 22px;
+  }
+
+  .composer-main-row {
+    gap: 0.35rem;
+    padding: 0.42rem 0.5rem;
+  }
+
+  .composer-plus-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .composer-textarea {
+    font-size: 1rem; /* 16px prevents iOS Safari auto-zoom */
+    line-height: 1.45;
+  }
+
+  .composer-right {
+    gap: 0.32rem;
+  }
+
+  .composer-thinking-btn {
+    height: 34px;
+    padding: 0 0.52rem;
+    font-size: 0.75rem;
+    gap: 0.35rem;
+  }
+
+  .composer-action-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Message Stream */
+  .chat-stream-scroll {
+    padding: 1.15rem 0.75rem 0.75rem;
+  }
+
+  .chat-turn__bubble {
+    max-width: 93%;
+  }
+
+  .chat-user-text {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .chat-assistant-markdown {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .chat-turn.is-user .chat-turn__bubble {
+    padding: 0.65rem 0.95rem;
+    border-radius: 18px 18px 4px 18px;
+  }
+
+  .chat-table-wrapper {
+    margin: 0.75rem 0;
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chat-modern-table th,
+  .chat-modern-table td {
+    padding: 0.6rem 0.65rem;
+    font-size: 0.78rem;
+  }
+
+  .chat-turn__rec-pill {
+    font-size: 0.75rem;
+    padding: 0.32rem 0.75rem;
+  }
+
+  .chat-citation-pill {
+    font-size: 0.72rem;
+    padding: 0.22rem 0.55rem;
+  }
+
+  /* Dynamic Recommendation Sidebar Drawer */
+  .chat-rec-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 18px;
+    z-index: 45;
+  }
+
+  .chat-rec-sidebar__header {
+    padding: 0.85rem 1rem;
+  }
+
+  .chat-rec-sidebar__list {
+    padding: 0.85rem 0.85rem 1.25rem;
+    gap: 0.85rem;
+  }
+
+  /* Fullscreen Voice Overlay */
+  .voice-fullscreen-overlay {
+    border-radius: 0;
+  }
+
+  .voice-fullscreen__topbar {
+    padding: 0.85rem 1rem;
+  }
+
+  .voice-fullscreen__caption {
+    font-size: 0.95rem;
+    padding: 0 1rem;
+  }
+
+  .voice-active-controls {
+    gap: 0.45rem;
+    padding: 0 0.5rem;
+  }
+
+  .voice-ctrl-btn {
+    padding: 0.6rem 0.95rem;
+    font-size: 0.8rem;
+    gap: 0.38rem;
+  }
+}
+
+/* Extra-small mobile screens (<= 480px) */
+@media (max-width: 480px) {
+  .composer-thinking-btn__text {
+    font-size: 0.72rem;
+  }
+
+  .voice-ctrl-btn.is-end span {
     font-size: 0.76rem;
   }
 }

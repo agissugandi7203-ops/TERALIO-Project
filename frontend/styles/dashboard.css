@@ -1403,6 +1403,31 @@ body.teralio-dashboard-body {
   }
 }
 
+@media (max-width: 640px) {
+  .dash-main {
+    padding: 0.85rem 0.65rem 1.75rem;
+  }
+
+  .subview-panel {
+    padding: 1.15rem 0.85rem;
+    border-radius: 20px;
+    margin-top: 0.85rem;
+  }
+
+  .subview-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .dash-topbar {
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-search {
+    min-width: 140px;
+  }
+}
+
 /* --------------------------------------------------------------------------
    9. Smart Kos Match — 100% Full-Page Edge-to-Edge Google Maps Mode
    -------------------------------------------------------------------------- */
