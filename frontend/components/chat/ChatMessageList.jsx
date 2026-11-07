@@ -4,20 +4,30 @@ import ThinkingOrbStage from './ThinkingOrbStage.jsx';
 const SMART_SCROLL_THRESHOLD_PX = 64;
 
 /**
- * Merender inline formatting aman (**bold**, `code`, [judul](https://url)) tanpa dangerouslySetInnerHTML.
+ * Merender inline formatting aman (**bold**, __bold__, *italic*, `code`, currency pill, dan [judul](https://url)) tanpa dangerouslySetInnerHTML.
  */
 function renderInlineTokens(text) {
   if (!text) return null;
-  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g;
+  // Deteksi bold, inline code, link, dan currency tag
+  const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|Rp\s?[\d.,]+(?:\s*\/\s*(?:bln|bulan))?)/g;
   const parts = String(text).split(pattern);
 
   return parts.map((part, idx) => {
     if (!part) return null;
 
-    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    // Bold (**text** atau __text__)
+    if (
+      (part.startsWith('**') && part.endsWith('**') && part.length > 4) ||
+      (part.startsWith('__') && part.endsWith('__') && part.length > 4)
+    ) {
+      return (
+        <strong key={idx} className="chat-bold">
+          {part.slice(2, -2)}
+        </strong>
+      );
     }
 
+    // Inline Code (`code`)
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
       return (
         <code key={idx} className="chat-inline-code">
@@ -26,6 +36,7 @@ function renderInlineTokens(text) {
       );
     }
 
+    // Link ([title](url))
     const linkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
     if (linkMatch) {
       return (
@@ -41,8 +52,133 @@ function renderInlineTokens(text) {
       );
     }
 
+    // Currency highlight (Rp 1.xxx.xxx)
+    if (/^Rp\s?[\d.,]+/i.test(part)) {
+      return (
+        <span key={idx} className="chat-currency-pill">
+          {part}
+        </span>
+      );
+    }
+
     return <React.Fragment key={idx}>{part}</React.Fragment>;
   });
+}
+
+/**
+ * Cek apakah baris berupa baris tabel markdown (| col1 | col2 | ...)
+ */
+function isTableRow(line) {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 3;
+}
+
+/**
+ * Cek apakah baris pemisah header tabel (|---|---|:---:|)
+ */
+function isTableDivider(line) {
+  const trimmed = line.trim();
+  return /^\|(?:\s*:?-+:?\s*\|)+$/.test(trimmed);
+}
+
+/**
+ * Komponen render tabel markdown interaktif dan elegan
+ */
+function RenderModernTable({ block }) {
+  const { headers, alignments, rows } = block;
+
+  return (
+    <div className="chat-table-wrapper" data-testid="chat-markdown-table-wrapper">
+      <table className="chat-modern-table" data-testid="chat-markdown-table">
+        <thead>
+          <tr>
+            {headers.map((h, hIdx) => (
+              <th
+                key={`th-${hIdx}`}
+                style={{ textAlign: alignments[hIdx] || 'left' }}
+                className={`th-col-${hIdx}`}
+              >
+                {renderInlineTokens(h)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rIdx) => (
+            <tr key={`tr-${rIdx}`}>
+              {row.map((cell, cIdx) => {
+                const headerText = headers[cIdx] ? headers[cIdx].toLowerCase() : '';
+                const cellText = String(cell).trim();
+
+                // Deteksi kolom tipe kos (Putri / Putra / Campur)
+                const isTypeCol =
+                  headerText.includes('tipe') ||
+                  headerText.includes('gender') ||
+                  /^(putri|putra|campur|putra\/putri)$/i.test(cellText);
+
+                if (isTypeCol) {
+                  const lower = cellText.toLowerCase();
+                  let badgeClass = 'is-campur';
+                  if (lower.includes('putri') && !lower.includes('putra')) {
+                    badgeClass = 'is-putri';
+                  } else if (lower.includes('putra') && !lower.includes('putri')) {
+                    badgeClass = 'is-putra';
+                  }
+
+                  return (
+                    <td
+                      key={`td-${cIdx}`}
+                      style={{ textAlign: alignments[cIdx] || 'left' }}
+                      className="td-badge-cell"
+                    >
+                      <span className={`table-badge ${badgeClass}`}>
+                        <span className="badge-dot" />
+                        {cellText}
+                      </span>
+                    </td>
+                  );
+                }
+
+                // Deteksi kolom harga
+                const isPriceCol =
+                  headerText.includes('harga') ||
+                  headerText.includes('biaya') ||
+                  headerText.includes('price') ||
+                  /^Rp/i.test(cellText);
+
+                if (isPriceCol) {
+                  return (
+                    <td
+                      key={`td-${cIdx}`}
+                      style={{ textAlign: alignments[cIdx] || 'right' }}
+                      className="td-price-cell"
+                    >
+                      <span className="table-price-tag">
+                        {renderInlineTokens(cellText)}
+                      </span>
+                    </td>
+                  );
+                }
+
+                // Kolom nama kos (kolom pertama)
+                const isFirstCol = cIdx === 0;
+
+                return (
+                  <td
+                    key={`td-${cIdx}`}
+                    style={{ textAlign: alignments[cIdx] || 'left' }}
+                    className={isFirstCol ? 'td-kos-name' : undefined}
+                  >
+                    {renderInlineTokens(cell)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function FormattedMessageContent({ text }) {
@@ -58,14 +194,72 @@ function FormattedMessageContent({ text }) {
     }
   };
 
-  lines.forEach((rawLine, idx) => {
+  let idx = 0;
+  while (idx < lines.length) {
+    const rawLine = lines[idx];
     const trimmed = rawLine.trim();
 
     if (!trimmed) {
       flushList();
-      return;
+      idx++;
+      continue;
     }
 
+    // 1. Deteksi Tabel Markdown (| header | header | ...)
+    if (
+      isTableRow(trimmed) &&
+      idx + 1 < lines.length &&
+      isTableDivider(lines[idx + 1])
+    ) {
+      flushList();
+
+      const tableLines = [];
+      while (idx < lines.length && isTableRow(lines[idx])) {
+        tableLines.push(lines[idx].trim());
+        idx++;
+      }
+
+      const cleanCells = (l) =>
+        l
+          .split('|')
+          .slice(1, -1)
+          .map((c) => c.trim());
+
+      const headers = cleanCells(tableLines[0]);
+      const dividerCells = cleanCells(tableLines[1]);
+      const rows = tableLines.slice(2).map(cleanCells).filter((r) => r.length > 0);
+
+      const alignments = dividerCells.map((d) => {
+        const left = d.startsWith(':');
+        const right = d.endsWith(':');
+        if (left && right) return 'center';
+        if (right) return 'right';
+        return 'left';
+      });
+
+      blocks.push({
+        type: 'table',
+        key: `table-${idx}`,
+        headers,
+        alignments,
+        rows,
+      });
+      continue;
+    }
+
+    // 2. Deteksi Callout Quote (> Catatan atau kutipan)
+    if (trimmed.startsWith('> ')) {
+      flushList();
+      blocks.push({
+        type: 'callout',
+        key: `callout-${idx}`,
+        text: trimmed.slice(2).trim(),
+      });
+      idx++;
+      continue;
+    }
+
+    // 3. Deteksi List (Bullet & Numbered)
     const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
     const numberedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
 
@@ -83,11 +277,13 @@ function FormattedMessageContent({ text }) {
         };
       }
       currentList.items.push({ key: `li-${idx}`, text: itemText });
-      return;
+      idx++;
+      continue;
     }
 
     flushList();
 
+    // 4. Deteksi Heading (### Heading 3, ## Heading 2, # Heading 1)
     const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
     if (headingMatch) {
       blocks.push({
@@ -96,26 +292,43 @@ function FormattedMessageContent({ text }) {
         key: `h-${idx}`,
         text: headingMatch[2],
       });
-      return;
+      idx++;
+      continue;
     }
 
+    // 5. Paragraf Normal dengan token inline
     blocks.push({
       type: 'paragraph',
       key: `p-${idx}`,
       text: rawLine,
     });
-  });
+    idx++;
+  }
 
   flushList();
 
   return (
     <div className="chat-formatted-body">
       {blocks.map((block) => {
-        if (block.type === 'heading') {
+        if (block.type === 'table') {
+          return <RenderModernTable key={block.key} block={block} />;
+        }
+
+        if (block.type === 'callout') {
           return (
-            <h4 key={block.key} className="chat-msg-heading">
+            <div key={block.key} className="chat-callout-card">
+              <div className="chat-callout-bar" aria-hidden="true" />
+              <p className="chat-callout-text">{renderInlineTokens(block.text)}</p>
+            </div>
+          );
+        }
+
+        if (block.type === 'heading') {
+          const Tag = block.level === 1 ? 'h3' : block.level === 2 ? 'h4' : 'h5';
+          return (
+            <Tag key={block.key} className={`chat-msg-heading level-${block.level}`}>
               {renderInlineTokens(block.text)}
-            </h4>
+            </Tag>
           );
         }
 
@@ -186,21 +399,27 @@ const ChatMessageItem = memo(function ChatMessageItem({
           </div>
         )}
 
-        {/* Indikator Thinking Orb sinkron dengan aktivitas aktual AI (bubble murni tanpa teks bertumpuk) */}
+        {/* Indikator Thinking Orb DIPERBESAR & Elegan saat Streaming Aktif */}
         {showOrb && (
-          <div className="chat-turn__status-row">
+          <div className="chat-turn__status-row" data-testid="chat-streaming-indicator">
             <ThinkingOrbStage
               mode="inline"
               state={message.orbState}
               variant={message.orbVariant || 'default'}
-              size={20}
+              size={28}
               paused={false}
               showLabel={false}
             />
+            <span className="chat-turn__status-text">
+              {message.statusLabel ||
+                (message.orbVariant === 'twins'
+                  ? 'Menalar secara mendalam (Thinking High)...'
+                  : 'Memproses respons...')}
+            </span>
           </div>
         )}
 
-        {/* Teks percakapan progresif */}
+        {/* Teks percakapan terstruktur progresif (Markdown table, bold, pills, callout) */}
         {message.content ? (
           isUser ? (
             <p className="chat-user-text">{message.content}</p>
@@ -208,6 +427,34 @@ const ChatMessageItem = memo(function ChatMessageItem({
             <FormattedMessageContent text={message.content} />
           )
         ) : null}
+
+        {/* Baris Metrik Throughput & Thinking Mode Transparan (tok/s, waktu, token) */}
+        {!isUser && message.metrics && (
+          <div className="chat-turn__metrics-bar" data-testid="chat-metrics-bar">
+            <span className="chat-metric-chip is-speed" title="Kecepatan respons token per detik (Throughput)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <span>{message.metrics.throughput} tok/s</span>
+            </span>
+            <span className="chat-metric-chip" title="Durasi pemrosesan respons">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{message.metrics.elapsedSeconds}s</span>
+            </span>
+            {message.metrics.isDeepThinking && (
+              <span className="chat-metric-chip is-thinking" title="Mode Reasoning Mendalam Aktif">
+                <span className="thinking-chip-dot" />
+                <span>Deep Reasoning</span>
+              </span>
+            )}
+            <span className="chat-metric-chip is-tokens" title="Total token respons">
+              <span>{message.metrics.outputTokens} tok</span>
+            </span>
+          </div>
+        )}
 
         {/* Pesan error transparan & jujur */}
         {message.error && (

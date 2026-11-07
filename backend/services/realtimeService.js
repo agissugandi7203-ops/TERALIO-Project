@@ -93,9 +93,9 @@ export async function buildRealtimeSessionConfig({
   } else if (turnDetection === 'server_vad') {
     resolvedTurnDetection = {
       type: 'server_vad',
-      threshold: 0.5,
-      prefix_padding_ms: 300,
-      silence_duration_ms: 500,
+      threshold: 0.42,
+      prefix_padding_ms: 550,
+      silence_duration_ms: 650,
       create_response: true,
       interrupt_response: true,
     };
@@ -443,6 +443,7 @@ export const realtimeService = {
       ok: execution.ok,
       durationMs: execution.durationMs,
       result: execution.ok ? execution.data : null,
+      uiAction: execution.ok ? execution.data?.uiAction ?? null : null,
       error: execution.ok ? null : execution.error,
       recommendations,
       clientEvents,

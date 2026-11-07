@@ -86,8 +86,11 @@ router.post('/items', itemsController.createItem);
 
 // Smart Kos Match — Supabase Accommodations, Geospatial Route, Survey Bookings, & AI Search Stream
 router.get('/accommodations', accommodationsController.listAccommodations);
+router.get('/accommodations/datetime', noStore, accommodationsController.getDatetime);
 router.get('/accommodations/bookings', noStore, accommodationsController.listBookings);
 router.post('/accommodations/bookings', noStore, aiRateLimiter, accommodationsController.createBooking);
+router.patch('/accommodations/bookings/:id', noStore, aiRateLimiter, accommodationsController.updateBooking);
+router.delete('/accommodations/bookings/:id', noStore, aiRateLimiter, accommodationsController.deleteBooking);
 router.get('/accommodations/:id', accommodationsController.getAccommodationById);
 router.post('/accommodations/route', aiRateLimiter, accommodationsController.computeRoute);
 router.post(

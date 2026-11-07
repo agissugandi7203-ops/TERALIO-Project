@@ -71,6 +71,16 @@ const describeToolActivity = (toolName) => {
     case 'teralio_search_accommodations':
     case 'teralio_get_accommodation_details':
       return 'Mencari data hunian & kos di TERALIO...';
+    case 'teralio_focus_map_location':
+      return 'Mengarahkan kamera peta ke lokasi kos...';
+    case 'teralio_get_current_datetime':
+      return 'Memeriksa kalender & waktu WIB hari ini...';
+    case 'teralio_list_visit_schedules':
+      return 'Memeriksa daftar jadwal janji temu...';
+    case 'teralio_create_visit_schedule':
+      return 'Menyimpan jadwal kunjungan ke Visit Schedule...';
+    case 'teralio_update_visit_schedule':
+      return 'Memperbarui jadwal janji temu survei...';
     case 'maps_search_places':
       return 'Mencari lokasi & tempat di Google Maps...';
     case 'maps_get_place_details':
@@ -350,6 +360,7 @@ export const openaiService = {
     const aggregatedSourcesMap = new Map();
     const aggregatedSearchCalls = [];
 
+    const streamStartTime = Date.now();
     let currentInput = resolvedInput;
     let currentPreviousId = previousResponseId || undefined;
     let latestResponse = null;
@@ -424,6 +435,9 @@ export const openaiService = {
       }
 
       const recommendations = extractVerifiedRecommendations(rawToolExecutions);
+      const uiActions = rawToolExecutions
+        .filter((ex) => ex.ok && ex.data?.uiAction)
+        .map((ex) => ex.data.uiAction);
 
       return {
         source: 'openai-responses',
@@ -436,6 +450,7 @@ export const openaiService = {
         outputText: latestResponse.output_text || '',
         toolCalls: toolCallsTrace,
         recommendations,
+        uiActions,
         webSearch: {
           searched: aggregatedSearchCalls.length > 0,
           searchCalls: aggregatedSearchCalls,
@@ -509,6 +524,7 @@ export const openaiService = {
     const aggregatedSourcesMap = new Map();
     const aggregatedSearchCalls = [];
 
+    const streamStartTime = Date.now();
     let currentInput = resolvedInput;
     let currentPreviousId = previousResponseId || undefined;
     let latestResponse = null;
@@ -734,6 +750,10 @@ export const openaiService = {
               error: execResult.error?.message || null,
             });
 
+            if (execResult.ok && execResult.data?.uiAction) {
+              emit('ui_action', execResult.data.uiAction);
+            }
+
             return {
               type: 'function_call_output',
               call_id: call.call_id,
@@ -768,6 +788,26 @@ export const openaiService = {
 
       const finalOutputText = accumulatedText || latestResponse?.output_text || '';
       const finalRecommendations = extractVerifiedRecommendations(rawToolExecutions);
+      const uiActions = rawToolExecutions
+        .filter((ex) => ex.ok && ex.data?.uiAction)
+        .map((ex) => ex.data.uiAction);
+
+      const elapsedMs = Math.max(50, Date.now() - (streamStartTime || Date.now()));
+      const elapsedSeconds = Number((elapsedMs / 1000).toFixed(2));
+      const totalOutputTokens =
+        latestResponse?.usage?.output_tokens ||
+        Math.round(finalOutputText.length / 3.8) ||
+        120;
+      const throughput = Number((totalOutputTokens / Math.max(0.1, elapsedSeconds)).toFixed(1));
+
+      const metrics = {
+        elapsedMs,
+        elapsedSeconds,
+        outputTokens: totalOutputTokens,
+        throughput,
+        isDeepThinking: Boolean(isDeepThinking),
+        model: latestResponse?.model || model,
+      };
 
       const finalPayload = {
         source: 'openai-responses-stream',
@@ -780,6 +820,7 @@ export const openaiService = {
         outputText: finalOutputText,
         toolCalls: toolCallsTrace,
         recommendations: finalRecommendations,
+        uiActions,
         webSearch: {
           searched: aggregatedSearchCalls.length > 0,
           searchCalls: aggregatedSearchCalls,
@@ -787,6 +828,7 @@ export const openaiService = {
           sources: Array.from(aggregatedSourcesMap.values()),
         },
         usage: latestResponse?.usage ?? null,
+        metrics,
       };
 
       emit('done', finalPayload);

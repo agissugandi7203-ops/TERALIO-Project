@@ -80,6 +80,53 @@ export const smartKosApi = {
   },
 
   /**
+   * Memperbarui jam, tanggal, atau status janji temu survei (`/api/accommodations/bookings/:id`).
+   */
+  async updateSurveyBooking(id, patchPayload, { signal } = {}) {
+    const res = await fetch(`/api/accommodations/bookings/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(patchPayload),
+      signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Gagal memperbarui jadwal janji temu.');
+    }
+    return payload.data;
+  },
+
+  /**
+   * Menghapus jadwal janji temu survei (`/api/accommodations/bookings/:id`).
+   */
+  async deleteSurveyBooking(id, { signal } = {}) {
+    const res = await fetch(`/api/accommodations/bookings/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: buildAuthHeaders(),
+      signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Gagal menghapus jadwal janji temu.');
+    }
+    return payload.data;
+  },
+
+  /**
+   * Mengambil waktu aktual WIB dari server (`/api/accommodations/datetime`).
+   */
+  async fetchCurrentDatetime({ signal } = {}) {
+    const res = await fetch('/api/accommodations/datetime', {
+      method: 'GET',
+      headers: buildAuthHeaders(),
+      signal,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload?.success) return null;
+    return payload.data || null;
+  },
+
+  /**
    * Streaming SSE pencarian AI & Voice Smart Kos (`/api/accommodations/ai-search/stream`):
    * menerima event `status` -> `redirect_location` -> `recommendations` -> `text_delta` -> `done`.
    */

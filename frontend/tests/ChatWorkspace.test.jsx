@@ -402,4 +402,69 @@ describe('TERALIO Unified Chat, Composer, Recommendation Sidebar, & Fullscreen V
     expect(screen.getByText('Carikan kos dekat kampus di Bandung')).toBeInTheDocument();
     expect(screen.getByText('Baik, saya carikan kos terbaik di sekitar Bandung.')).toBeInTheDocument();
   });
+
+  it('mendukung Structured Output (tabel markdown interaktif, badge tipe, harga) dan metrik Throughput tok/s', async () => {
+    let capturedRequestBody = null;
+    global.fetch = vi.fn().mockImplementation((url, opts) => {
+      if (url === '/api/openai/responses/stream') {
+        capturedRequestBody = JSON.parse(opts.body);
+        return buildSseResponse([
+          {
+            event: 'text_delta',
+            data: {
+              delta:
+                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n|---|---|---:|\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
+            },
+          },
+          {
+            event: 'done',
+            data: {
+              responseId: 'resp_table_1',
+              outputText:
+                'Di Bandung, TERALIO mencatat **8 pilihan kos**:\n\n| Kos | Tipe | Harga |\n|---|---|---:|\n| Bojongsoang Suites | Putri | Rp1.150.000 |\n| Sukapura Loft | Campur | Rp1.350.000 |\n\nSilakan pilih kos favorit Anda.',
+              metrics: {
+                elapsedSeconds: 1.2,
+                outputTokens: 240,
+                throughput: 52.4,
+                isDeepThinking: true,
+              },
+            },
+          },
+        ]);
+      }
+      return { ok: true, json: async () => ({ success: true }) };
+    });
+
+    render(<ChatWorkspace user={{ fullName: 'Andreas' }} />);
+
+    // Aktifkan mode Thinking (High Reasoning)
+    const thinkingBtn = screen.getByTestId('composer-thinking-toggle');
+    fireEvent.click(thinkingBtn);
+    expect(thinkingBtn).toHaveTextContent('Thinking On');
+
+    const input = screen.getByTestId('chat-composer-input');
+    fireEvent.change(input, { target: { value: 'Tampilkan perbandingan kos dalam tabel' } });
+    fireEvent.click(screen.getByTestId('composer-send-btn'));
+
+    // Pastikan request mengirim reasoningEffort: 'high'
+    await waitFor(() => {
+      expect(capturedRequestBody?.reasoningEffort).toBe('high');
+    });
+
+    // Verifikasi Structured Output Tabel
+    await waitFor(() => {
+      expect(screen.getByTestId('chat-markdown-table')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Bojongsoang Suites')).toBeInTheDocument();
+    expect(screen.getByText('Sukapura Loft')).toBeInTheDocument();
+    expect(screen.getByText('Putri')).toHaveClass('table-badge');
+    expect(screen.getByText('Campur')).toHaveClass('table-badge');
+    expect(screen.getByText('8 pilihan kos')).toHaveClass('chat-bold');
+
+    // Verifikasi Baris Metrik Throughput & Thinking
+    expect(screen.getByTestId('chat-metrics-bar')).toBeInTheDocument();
+    expect(screen.getByText(/52\.4 tok\/s/)).toBeInTheDocument();
+    expect(screen.getByText(/Deep Reasoning/i)).toBeInTheDocument();
+  });
 });

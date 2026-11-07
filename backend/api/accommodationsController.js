@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { accommodationsService } from '../services/accommodationsService.js';
+import { accommodationsService, getCurrentWibContext } from '../services/accommodationsService.js';
 import { osmGeoService } from '../services/osmGeoService.js';
 import { badRequest, notFound } from '../utils/errors.js';
 import { redact } from '../utils/logger.js';
@@ -30,9 +30,22 @@ export const surveyBookingSchema = z.object({
   address: z.string().max(350).optional(),
   ownerName: z.string().max(150).optional(),
   contactPhone: z.string().max(60).optional(),
-  scheduledLabel: z.string().min(3).max(160),
+  scheduledLabel: z.string().min(3).max(160).optional(),
   scheduledIso: z.string().max(40).optional(),
+  scheduledTime: z.string().max(40).optional(),
+  notes: z.string().max(500).optional(),
   visitorName: z.string().max(120).optional(),
+});
+
+export const surveyBookingUpdateSchema = z.object({
+  scheduledLabel: z.string().min(3).max(160).optional(),
+  scheduledIso: z.string().max(40).optional(),
+  scheduledTime: z.string().max(40).optional(),
+  newDate: z.string().max(60).optional(),
+  newTime: z.string().max(60).optional(),
+  status: z.string().max(40).optional(),
+  notes: z.string().max(500).optional(),
+  accommodationName: z.string().max(200).optional(),
 });
 
 export const accommodationsController = {
@@ -212,6 +225,45 @@ export const accommodationsController = {
     } catch (err) {
       return next(err);
     }
+  },
+
+  // PATCH /api/accommodations/bookings/:id
+  async updateBooking(req, res, next) {
+    try {
+      const parsed = surveyBookingUpdateSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return next(badRequest('Parameter pembaruan jadwal survei tidak valid', parsed.error.issues));
+      }
+      const result = await accommodationsService.updateSurveyBooking(req.params.id, parsed.data);
+      return res.status(200).json({
+        success: true,
+        source: result.source,
+        data: result.booking,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // DELETE /api/accommodations/bookings/:id
+  async deleteBooking(req, res, next) {
+    try {
+      const result = await accommodationsService.deleteSurveyBooking(req.params.id);
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // GET /api/accommodations/datetime
+  async getDatetime(req, res) {
+    return res.status(200).json({
+      success: true,
+      data: getCurrentWibContext(),
+    });
   },
 };
 

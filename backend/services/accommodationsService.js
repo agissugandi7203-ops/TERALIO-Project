@@ -122,6 +122,154 @@ let missingBookingsBackoffUntil = 0;
 let runtimeBookings = [];
 
 /**
+ * Mengembalikan konteks waktu & kalender aktual zona waktu Indonesia Barat (`Asia/Jakarta`).
+ */
+export function getCurrentWibContext(referenceDate = new Date()) {
+  const isoFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const fullDateFormatter = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const shortDateFormatter = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const weekdayFormatter = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    weekday: 'long',
+  });
+
+  const todayIso = isoFormatter.format(referenceDate);
+  const rawTime = timeFormatter.format(referenceDate).replace('.', ':');
+  const currentTimeWib = `${rawTime} WIB`;
+  const todayLabel = fullDateFormatter.format(referenceDate);
+
+  const upcomingDays = Array.from({ length: 10 }, (_, offset) => {
+    const dt = new Date(referenceDate.getTime() + offset * 24 * 60 * 60 * 1000);
+    const isoDate = isoFormatter.format(dt);
+    const dayName = weekdayFormatter.format(dt);
+    const relativeLabel =
+      offset === 0 ? 'Hari Ini' : offset === 1 ? 'Besok' : offset === 2 ? 'Lusa' : dayName;
+    return {
+      offset,
+      isoDate,
+      dayName,
+      relativeLabel,
+      formatted: shortDateFormatter.format(dt),
+    };
+  });
+
+  return {
+    timezone: 'Asia/Jakarta',
+    isoNow: referenceDate.toISOString(),
+    todayIso,
+    todayLabel,
+    currentTimeWib,
+    tomorrowIso: upcomingDays[1].isoDate,
+    dayAfterTomorrowIso: upcomingDays[2].isoDate,
+    upcomingDays,
+  };
+}
+
+export function normalizeVisitTimeWib(rawTime = '') {
+  const cleaned = String(rawTime || '').trim();
+  if (!cleaned) return '10:00 WIB';
+  const hhmm = cleaned.match(/(\d{1,2})[.:](\d{2})/);
+  if (hhmm) {
+    const h = Math.min(23, Math.max(0, Number.parseInt(hhmm[1], 10)));
+    const m = Math.min(59, Math.max(0, Number.parseInt(hhmm[2], 10)));
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} WIB`;
+  }
+  const hourOnly = cleaned.match(/\b(\d{1,2})\b/);
+  if (hourOnly) {
+    let h = Number.parseInt(hourOnly[1], 10);
+    if (/sore|malam/i.test(cleaned) && h < 12) h += 12;
+    else if (/siang/i.test(cleaned) && h >= 1 && h <= 5) h += 12;
+    return `${String(Math.min(23, Math.max(0, h))).padStart(2, '0')}:00 WIB`;
+  }
+  return cleaned.toUpperCase().includes('WIB') ? cleaned : `${cleaned} WIB`;
+}
+
+export function formatVisitScheduleLabel(isoDate, rawTime) {
+  const timeWib = normalizeVisitTimeWib(rawTime);
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(String(isoDate))) {
+    return `Besok • ${timeWib}`;
+  }
+  const [y, m, d] = String(isoDate).split('-').map(Number);
+  const utcNoon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const datePart = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(utcNoon);
+  return `${datePart} • ${timeWib}`;
+}
+
+export function resolveDateInputToIso(rawInput = '', referenceDate = new Date()) {
+  const ctx = getCurrentWibContext(referenceDate);
+  const str = String(rawInput || '').trim();
+  if (!str) return ctx.tomorrowIso;
+
+  const isoMatch = str.match(/(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+
+  const lower = str.toLowerCase();
+  if (/\b(hari\s*ini|today|sekarang|malam\s*ini|sore\s*ini|siang\s*ini)\b/i.test(lower)) {
+    return ctx.todayIso;
+  }
+  if (/\b(lusa)\b/i.test(lower)) {
+    return ctx.dayAfterTomorrowIso;
+  }
+  if (/\b(besok|esok|tomorrow)\b/i.test(lower)) {
+    return ctx.tomorrowIso;
+  }
+
+  const dayAliases = [
+    { re: /\bsenin\b/i, day: 'senin' },
+    { re: /\bselasa\b/i, day: 'selasa' },
+    { re: /\brabu\b/i, day: 'rabu' },
+    { re: /\bkamis\b/i, day: 'kamis' },
+    { re: /\bjum'?at\b/i, day: 'jumat' },
+    { re: /\bsabtu\b/i, day: 'sabtu' },
+    { re: /\b(minggu|ahad)\b/i, day: 'minggu' },
+  ];
+
+  for (const entry of dayAliases) {
+    if (entry.re.test(lower)) {
+      const candidate =
+        ctx.upcomingDays.find(
+          (d) => d.offset >= 1 && d.dayName.toLowerCase().replace(/[^a-z]/g, '') === entry.day,
+        ) ||
+        ctx.upcomingDays.find(
+          (d) => d.dayName.toLowerCase().replace(/[^a-z]/g, '') === entry.day,
+        );
+      if (candidate) return candidate.isoDate;
+    }
+  }
+
+  return ctx.tomorrowIso;
+}
+
+/**
  * Mengekstrak niat pencarian kos berbahasa Indonesia (kampus, area, tipe kos, budget, fasilitas, urutan).
  */
 export function parseSmartKosIntent(promptText = '', fallbackCampusId = 'telkom') {
@@ -131,7 +279,14 @@ export function parseSmartKosIntent(promptText = '', fallbackCampusId = 'telkom'
   let detectedCampusId = null;
   let detectedCity = null;
 
-  if (/\b(itb|ganesha|cisitu|dago|tamansari|pelesiran|dipatiukur|unpad|sabuga|coblong)\b/i.test(lower)) {
+  if (
+    /\b(utb|universitas\s*teknologi\s*bandung|stt\s*bandung|sttb|soekarno\s*-?\s*hatta|378|leuwi\s*panjang|leuwipanjang|mekarwangi|kebon\s*lega|bojongloa|muara\s*raya|cibaduyut|moh\.?\s*toha)\b/i.test(
+      lower,
+    )
+  ) {
+    detectedCampusId = 'utb';
+    detectedCity = 'Bandung';
+  } else if (/\b(itb|ganesha|cisitu|dago|tamansari|pelesiran|dipatiukur|unpad|sabuga|coblong)\b/i.test(lower)) {
     detectedCampusId = 'itb';
     detectedCity = 'Bandung';
   } else if (/\b(universitas indonesia|\bui\b|depok|kukusan|kutek|pondok cina|pocin|margonda|bikun|fasilkom)\b/i.test(lower)) {
@@ -202,6 +357,12 @@ export function parseSmartKosIntent(promptText = '', fallbackCampusId = 'telkom'
     { pattern: /pondok\s*cina|pocin|margonda/i, term: 'pondok cina' },
     { pattern: /pogung/i, term: 'pogung' },
     { pattern: /sendowo|sardjito|fkkmk/i, term: 'sendowo' },
+    { pattern: /utb|universitas\s*teknologi\s*bandung|soekarno/i, term: 'soekarno' },
+    { pattern: /mekarwangi/i, term: 'mekarwangi' },
+    { pattern: /leuwi\s*panjang|leuwipanjang/i, term: 'leuwi panjang' },
+    { pattern: /kebon\s*lega/i, term: 'kebon lega' },
+    { pattern: /muara\s*raya|muara/i, term: 'muara' },
+    { pattern: /co-?working|coworking/i, term: 'co-working' },
   ];
 
   for (const entry of KEYWORD_CATALOG) {
@@ -301,6 +462,27 @@ export const accommodationsService = {
           item.name.toLowerCase() === needle,
       ) || null
     );
+  },
+
+  async resolveAccommodation(idOrQuery) {
+    const raw = String(idOrQuery || '').trim();
+    if (!raw) return null;
+
+    const exact = await this.getById(raw);
+    if (exact) return exact;
+
+    const lower = raw.toLowerCase();
+    const catalog = await this.loadCatalog();
+    const partial = catalog.items.find(
+      (item) =>
+        item.name.toLowerCase().includes(lower) ||
+        lower.includes(item.name.toLowerCase()) ||
+        String(item.slug || '').toLowerCase().includes(lower),
+    );
+    if (partial) return partial;
+
+    const searched = await this.search({ query: raw, limit: 1 });
+    return searched.primaryMatch || null;
   },
 
   /**
@@ -511,6 +693,9 @@ export const accommodationsService = {
     const isTestEnv = Boolean(process.env.VITEST) || process.env.NODE_ENV === 'test';
     const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 280;
 
+    const startTime = Date.now();
+    const isDeepThinking = reasoningEffort === 'high' || reasoningEffort === 'xhigh';
+
     // Step 1: Reasoning / Analisis Kriteria
     emit('status', {
       orbState: 'reasoning',
@@ -682,6 +867,19 @@ export const accommodationsService = {
     }
 
     const responseId = `smartkos_${crypto.randomUUID().slice(0, 12)}`;
+    const elapsedMs = Math.max(60, Date.now() - (startTime || Date.now()));
+    const elapsedSeconds = Number((elapsedMs / 1000).toFixed(2));
+    const totalOutputTokens = Math.round(finalText.length / 3.8) || 120;
+    const throughput = Number((totalOutputTokens / Math.max(0.1, elapsedSeconds)).toFixed(1));
+
+    const metrics = {
+      elapsedMs,
+      elapsedSeconds,
+      outputTokens: totalOutputTokens,
+      throughput,
+      isDeepThinking: Boolean(isDeepThinking),
+    };
+
     emit('done', {
       responseId,
       aiEngine,
@@ -694,6 +892,7 @@ export const accommodationsService = {
       matchedAccommodations: searchResult.items,
       recommendations: verifiedRecommendations,
       dataSource: searchResult.source,
+      metrics,
     });
   },
 
@@ -759,20 +958,26 @@ export const accommodationsService = {
         if (Array.isArray(data)) {
           return {
             source: 'supabase',
-            items: data.map((row) => ({
-              id: row.id,
-              accommodationId: row.accommodation_id,
-              accommodationName: row.accommodation_name,
-              campusName: row.campus_name,
-              address: row.address,
-              ownerName: row.owner_name,
-              contactPhone: row.contact_phone,
-              scheduledLabel: row.scheduled_label,
-              scheduledIso: row.scheduled_iso,
-              visitorName: row.visitor_name,
-              status: row.status || 'Terjadwal',
-              createdAt: row.created_at,
-            })),
+            items: data.map((row) => {
+              const iso = row.scheduled_iso || resolveDateInputToIso(row.scheduled_label || '');
+              const timeWib = normalizeVisitTimeWib(row.scheduled_time || row.scheduled_label || '10:00 WIB');
+              return {
+                id: row.id,
+                accommodationId: row.accommodation_id,
+                accommodationName: row.accommodation_name,
+                campusName: row.campus_name,
+                address: row.address,
+                ownerName: row.owner_name,
+                contactPhone: row.contact_phone,
+                scheduledLabel: row.scheduled_label || formatVisitScheduleLabel(iso, timeWib),
+                scheduledIso: iso,
+                scheduledTime: timeWib,
+                notes: row.notes || '',
+                visitorName: row.visitor_name,
+                status: row.status || 'Terjadwal',
+                createdAt: row.created_at,
+              };
+            }),
           };
         }
       } catch {
@@ -790,23 +995,40 @@ export const accommodationsService = {
    * Membuat jadwal survei kos baru secara dinamis ke Supabase `public.survey_bookings` (dengan sinkronisasi runtime).
    */
   async createSurveyBooking(payload = {}) {
-    const kos = payload.accommodationId ? await this.getById(payload.accommodationId) : null;
+    const kos =
+      payload.accommodationId || payload.accommodationName
+        ? await this.resolveAccommodation(payload.accommodationId || payload.accommodationName)
+        : null;
     const id = `srv_${crypto.randomUUID().slice(0, 10)}`;
     const nowIso = new Date().toISOString();
 
+    const scheduledIso = resolveDateInputToIso(
+      payload.scheduledIso || payload.visitDate || payload.scheduledLabel || '',
+    );
+    const scheduledTime = normalizeVisitTimeWib(
+      payload.scheduledTime || payload.visitTime || payload.scheduledLabel || '10:00 WIB',
+    );
+    const scheduledLabel = payload.scheduledLabel
+      ? String(payload.scheduledLabel)
+      : formatVisitScheduleLabel(scheduledIso, scheduledTime);
+
     const record = {
       id,
-      accommodationId: String(payload.accommodationId || kos?.id || 'kos-custom'),
+      accommodationId: String(kos?.id || payload.accommodationId || 'kos-custom'),
       accommodationName: String(payload.accommodationName || kos?.name || 'Hunian Kos TERALIO'),
+      campusId: kos?.campusId || payload.campusId || null,
       campusName: String(payload.campusName || kos?.campusName || ''),
       address: String(payload.address || kos?.address || ''),
       ownerName: String(payload.ownerName || kos?.contact?.ownerName || 'Pengelola Kos'),
       contactPhone: String(payload.contactPhone || kos?.contact?.phone || ''),
-      scheduledLabel: String(payload.scheduledLabel || 'Besok • 10:00 WIB'),
-      scheduledIso: payload.scheduledIso ? String(payload.scheduledIso) : null,
+      scheduledLabel,
+      scheduledIso,
+      scheduledTime,
+      notes: String(payload.notes || '').trim(),
       visitorName: String(payload.visitorName || 'Mahasiswa TERALIO'),
-      status: 'Terjadwal',
+      status: String(payload.status || 'Terjadwal'),
       createdAt: nowIso,
+      updatedAt: nowIso,
     };
 
     if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
@@ -840,12 +1062,14 @@ export const accommodationsService = {
         }
 
         if (data) {
+          const saved = {
+            ...record,
+            createdAt: data.created_at || nowIso,
+          };
+          runtimeBookings = [saved, ...runtimeBookings.filter((b) => b.id !== saved.id)].slice(0, 50);
           return {
             source: 'supabase',
-            booking: {
-              ...record,
-              createdAt: data.created_at || nowIso,
-            },
+            booking: saved,
           };
         }
       } catch {
@@ -857,6 +1081,138 @@ export const accommodationsService = {
     return {
       source: 'runtime-store',
       booking: record,
+    };
+  },
+
+  /**
+   * Memperbarui jadwal survei / janji temu (ubah jam, ubah tanggal, status, atau catatan).
+   */
+  async updateSurveyBooking(idOrMatch, patch = {}) {
+    const listed = await this.listSurveyBookings();
+    const allItems = listed.items || [];
+
+    const needle = String(idOrMatch || patch.bookingId || '').trim();
+    const nameNeedle = String(patch.accommodationName || '').trim().toLowerCase();
+
+    let target = null;
+    if (needle) {
+      target =
+        allItems.find((b) => b.id === needle) ||
+        allItems.find(
+          (b) =>
+            b.accommodationId?.toLowerCase() === needle.toLowerCase() ||
+            b.accommodationName?.toLowerCase().includes(needle.toLowerCase()),
+        ) ||
+        null;
+    }
+    if (!target && nameNeedle) {
+      target =
+        allItems.find((b) => b.accommodationName?.toLowerCase().includes(nameNeedle)) || null;
+    }
+    if (!target && allItems.length > 0) {
+      target = allItems.find((b) => b.status !== 'Dibatalkan') || allItems[0];
+    }
+
+    if (!target) {
+      const err = new Error('Jadwal janji temu survei tidak ditemukan untuk diperbarui');
+      err.status = 404;
+      err.code = 'BOOKING_NOT_FOUND';
+      throw err;
+    }
+
+    const nextIso =
+      patch.scheduledIso || patch.newDate
+        ? resolveDateInputToIso(patch.scheduledIso || patch.newDate)
+        : target.scheduledIso || resolveDateInputToIso(target.scheduledLabel);
+
+    const nextTime =
+      patch.scheduledTime || patch.newTime
+        ? normalizeVisitTimeWib(patch.scheduledTime || patch.newTime)
+        : target.scheduledTime || normalizeVisitTimeWib(target.scheduledLabel);
+
+    const nextLabel = patch.scheduledLabel
+      ? String(patch.scheduledLabel)
+      : formatVisitScheduleLabel(nextIso, nextTime);
+
+    const updated = {
+      ...target,
+      scheduledIso: nextIso,
+      scheduledTime: nextTime,
+      scheduledLabel: nextLabel,
+      status: patch.status ? String(patch.status) : target.status === 'Dibatalkan' ? 'Terjadwal' : target.status,
+      notes: patch.notes !== undefined ? String(patch.notes).trim() : target.notes || '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
+      try {
+        const supabase = getSupabaseClient();
+        const { error } = await supabase
+          .from('survey_bookings')
+          .update({
+            scheduled_label: updated.scheduledLabel,
+            scheduled_iso: updated.scheduledIso,
+            status: updated.status,
+          })
+          .eq('id', updated.id);
+
+        if (error) {
+          if (error.code === 'PGRST205' || /survey_bookings/i.test(error.message || '')) {
+            missingBookingsBackoffUntil = Date.now() + 12_000;
+          }
+          throw error;
+        }
+
+        runtimeBookings = runtimeBookings.some((b) => b.id === updated.id)
+          ? runtimeBookings.map((b) => (b.id === updated.id ? updated : b))
+          : [updated, ...runtimeBookings];
+
+        return {
+          source: 'supabase',
+          booking: updated,
+        };
+      } catch {
+        // Fallback ke runtime store
+      }
+    }
+
+    runtimeBookings = runtimeBookings.some((b) => b.id === updated.id)
+      ? runtimeBookings.map((b) => (b.id === updated.id ? updated : b))
+      : [updated, ...runtimeBookings];
+
+    return {
+      source: 'runtime-store',
+      booking: updated,
+    };
+  },
+
+  /**
+   * Menghapus jadwal survei dari daftar janji temu.
+   */
+  async deleteSurveyBooking(id) {
+    const cleanId = String(id || '').trim();
+    if (!cleanId) {
+      const err = new Error('ID jadwal wajib diisi');
+      err.status = 400;
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
+      try {
+        const supabase = getSupabaseClient();
+        await supabase.from('survey_bookings').delete().eq('id', cleanId);
+      } catch {
+        // Lanjut hapus dari runtime store
+      }
+    }
+
+    const beforeLen = runtimeBookings.length;
+    runtimeBookings = runtimeBookings.filter((b) => b.id !== cleanId);
+    return {
+      deleted: true,
+      removedFromRuntime: beforeLen !== runtimeBookings.length,
+      id: cleanId,
     };
   },
 

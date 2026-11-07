@@ -160,6 +160,7 @@ export const chatApi = {
       onToolStart,
       onToolEnd,
       onRecommendations,
+      onUiAction,
       onTextDelta,
       onCitation,
       onDone,
@@ -205,6 +206,9 @@ export const chatApi = {
           break;
         case 'recommendations':
           onRecommendations?.(data);
+          break;
+        case 'ui_action':
+          onUiAction?.(data);
           break;
         case 'text_delta':
           onTextDelta?.(data);

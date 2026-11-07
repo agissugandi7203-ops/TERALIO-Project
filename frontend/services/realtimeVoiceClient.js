@@ -25,7 +25,17 @@ function describeVoiceTool(toolName = '') {
       return 'Menghitung jarak & waktu tempuh...';
     case 'teralio_search_accommodations':
     case 'teralio_get_accommodation_details':
-      return 'Mencari data kos di TERALIO...';
+      return 'Mencari data kos di database TERALIO...';
+    case 'teralio_focus_map_location':
+      return 'Mengarahkan kamera peta ke lokasi kos...';
+    case 'teralio_get_current_datetime':
+      return 'Memeriksa waktu & tanggal hari ini...';
+    case 'teralio_list_visit_schedules':
+      return 'Memeriksa kalender janji temu...';
+    case 'teralio_create_visit_schedule':
+      return 'Menjadwalkan survei & membuka Visit Schedule...';
+    case 'teralio_update_visit_schedule':
+      return 'Memperbarui jam janji temu di Visit Schedule...';
     case 'teralio_web_search':
       return 'Menelusuri informasi terkini di web...';
     default:
@@ -33,17 +43,21 @@ function describeVoiceTool(toolName = '') {
   }
 }
 
+let activeGlobalVoiceClient = null;
+
 export class RealtimeVoiceClient {
   constructor({
     onStateChange,
     onTranscript,
     onRecommendations,
+    onUiAction,
     onAudioLevels,
     onError,
   } = {}) {
     this.onStateChange = onStateChange;
     this.onTranscript = onTranscript;
     this.onRecommendations = onRecommendations;
+    this.onUiAction = onUiAction;
     this.onAudioLevels = onAudioLevels;
     this.onError = onError;
 
@@ -61,6 +75,8 @@ export class RealtimeVoiceClient {
     this.isConnected = false;
     this.isAiSpeaking = false;
     this.disposed = false;
+    this.shouldAutoGreet = true;
+    this.hasSentInitialGreeting = false;
   }
 
   emitState(statePatch) {
@@ -68,8 +84,40 @@ export class RealtimeVoiceClient {
     this.onStateChange?.(statePatch);
   }
 
-  async connect({ userContext, reasoningEffort = 'low', voice } = {}) {
+  triggerInitialGreetingIfNeeded() {
+    if (this.disposed || !this.shouldAutoGreet || this.hasSentInitialGreeting) return;
+    if (!this.dc || this.dc.readyState !== 'open') return;
+    this.hasSentInitialGreeting = true;
+    this.sendClientEvent({
+      type: 'response.create',
+      response: {
+        instructions:
+          'Sapa pengguna secara singkat, ramah, dan natural dalam Bahasa Indonesia (cukup 1-2 kalimat pendek), lalu tanyakan apakah ingin dicarikan kos (misal sekitar UTB, Telkom, atau ITB) atau mengatur jadwal kunjungan survei.',
+      },
+    });
+  }
+
+  async connect({ userContext, reasoningEffort = 'low', voice, autoGreet = true } = {}) {
+    // Pastikan tidak pernah ada 2 sesi suara atau browser TTS yang tumpang tindih!
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+    if (activeGlobalVoiceClient && activeGlobalVoiceClient !== this) {
+      try {
+        activeGlobalVoiceClient.cleanupResources();
+      } catch {
+        // ignore
+      }
+    }
+    activeGlobalVoiceClient = this;
+
     this.disposed = false;
+    this.shouldAutoGreet = autoGreet !== false;
+    this.hasSentInitialGreeting = false;
 
     if (
       typeof navigator === 'undefined' ||
@@ -104,8 +152,13 @@ export class RealtimeVoiceClient {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          channelCount: 1,
         },
       });
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
     } catch (micErr) {
       const denied =
         micErr?.name === 'NotAllowedError' || micErr?.name === 'PermissionDeniedError';
@@ -131,17 +184,23 @@ export class RealtimeVoiceClient {
 
     try {
       // 1. Minta ephemeral client secret dari backend (tanpa mengekspos OPENAI_API_KEY)
+      // Gunakan server_vad dengan prefix_padding 550ms & far_field agar awal kalimat user tidak terpotong!
       const tokenRes = await fetch('/api/realtime/client-secrets', {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          turnDetection: 'semantic_vad',
+          turnDetection: 'server_vad',
+          noiseReduction: 'far_field',
           reasoningEffort: reasoningEffort === 'high' ? 'high' : 'low',
           enableTools: true,
           ...(voice ? { voice } : {}),
           ...(userContext ? { userContext } : {}),
         }),
       });
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
 
       const tokenPayload = await tokenRes.json().catch(() => ({}));
       if (!tokenRes.ok || !tokenPayload?.success) {
@@ -177,6 +236,7 @@ export class RealtimeVoiceClient {
       this.setupAudioMetering(this.localStream, null);
 
       pc.ontrack = (event) => {
+        if (this.disposed) return;
         const [remoteStream] = event.streams;
         if (remoteStream) {
           this.remoteStream = remoteStream;
@@ -215,7 +275,15 @@ export class RealtimeVoiceClient {
       this.bindDataChannel(dc);
 
       const offer = await pc.createOffer();
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
       await pc.setLocalDescription(offer);
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
 
       this.emitState({
         phase: 'connecting',
@@ -235,6 +303,10 @@ export class RealtimeVoiceClient {
         },
         body: offer.sdp,
       });
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
 
       if (!sdpRes.ok) {
         const err = new Error(`Pertukaran SDP Realtime gagal (HTTP ${sdpRes.status}).`);
@@ -244,6 +316,10 @@ export class RealtimeVoiceClient {
       }
 
       const answerSdp = await sdpRes.text();
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
       const locationHeader = sdpRes.headers?.get?.('location') || '';
       if (locationHeader) {
         const segments = locationHeader.replace(/\/+$/, '').split('/');
@@ -254,6 +330,10 @@ export class RealtimeVoiceClient {
         type: 'answer',
         sdp: answerSdp,
       });
+      if (this.disposed) {
+        this.cleanupResources();
+        return;
+      }
 
       this.isConnected = true;
       this.emitState({
@@ -331,8 +411,9 @@ export class RealtimeVoiceClient {
         variant: 'blink',
         speed: 1.05,
         paused: false,
-        label: 'Mendengarkan Anda...',
+        label: 'Menyapa Anda...',
       });
+      this.triggerInitialGreetingIfNeeded();
     };
 
     dc.onmessage = (msgEvent) => {
@@ -361,6 +442,7 @@ export class RealtimeVoiceClient {
     switch (event.type) {
       case 'session.created':
       case 'session.updated':
+        this.triggerInitialGreetingIfNeeded();
         if (!this.isAiSpeaking) {
           this.emitState({
             phase: 'listening',
@@ -569,6 +651,9 @@ export class RealtimeVoiceClient {
         if (payload.data.recommendations?.hasValidRecommendations) {
           this.onRecommendations?.(payload.data.recommendations);
         }
+        if (payload.data.uiAction) {
+          this.onUiAction?.(payload.data.uiAction);
+        }
         const clientEvents = Array.isArray(payload.data.clientEvents)
           ? payload.data.clientEvents
           : [];
@@ -639,6 +724,9 @@ export class RealtimeVoiceClient {
     this.disposed = true;
     this.isConnected = false;
     this.isAiSpeaking = false;
+    if (activeGlobalVoiceClient === this) {
+      activeGlobalVoiceClient = null;
+    }
 
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);

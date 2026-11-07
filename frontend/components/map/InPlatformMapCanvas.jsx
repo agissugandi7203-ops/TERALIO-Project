@@ -149,10 +149,12 @@ export function InPlatformMapCanvas({
     const canAnimate = el.clientWidth > 0 && el.clientHeight > 0 && !mini && !isFirstMove;
 
     try {
+      map.stop?.();
+      map.invalidateSize?.({ pan: false });
       if (canAnimate && typeof map.flyTo === 'function') {
         map.flyTo([centerTarget.lat, centerTarget.lng], zoom, {
           animate: true,
-          duration: 1.25,
+          duration: 1.15,
           easeLinearity: 0.22,
         });
       } else {

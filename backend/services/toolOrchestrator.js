@@ -4,7 +4,7 @@ import { AppError, badRequest, notFound, timeoutError } from '../utils/errors.js
 import { withTimeout } from '../utils/http.js';
 import { createLogger } from '../utils/logger.js';
 import { googleMapsService } from './googleMapsService.js';
-import { accommodationsService } from './accommodationsService.js';
+import { accommodationsService, getCurrentWibContext } from './accommodationsService.js';
 import { itemsService } from './itemsService.js';
 import { mcpClientService } from './mcpClientService.js';
 import { buildWebSearchToolConfig, webSearchService } from './webSearchService.js';
@@ -96,7 +96,17 @@ const LOCAL_TOOLS = [
         source: supaSearch.source,
         totalMatched: supaSearch.totalMatched,
         returnedCount: supaSearch.items.length,
+        campusId: supaSearch.campusId,
+        primaryMatch: supaSearch.primaryMatch,
         accommodations: supaSearch.items,
+        uiAction: supaSearch.primaryMatch
+          ? {
+              type: 'focus_map',
+              nav: 'discovery',
+              campusId: supaSearch.campusId,
+              targetKos: supaSearch.primaryMatch,
+            }
+          : null,
       };
     },
   },
@@ -114,7 +124,255 @@ const LOCAL_TOOLS = [
     async handler({ id }) {
       const item = (await itemsService.getById(id)) || (await accommodationsService.getById(id));
       if (!item) throw notFound(`Hunian dengan ID '${id}' tidak ditemukan`);
-      return { accommodation: item };
+      return {
+        accommodation: item,
+        uiAction: item.lat && item.lng
+          ? {
+              type: 'focus_map',
+              nav: 'discovery',
+              campusId: item.campusId || null,
+              targetKos: item,
+            }
+          : null,
+      };
+    },
+  },
+  {
+    name: 'teralio_focus_map_location',
+    title: 'Arahkan Kamera Peta ke Kos / Kampus',
+    category: 'accommodation',
+    exposeInResponses: true,
+    exposeInRealtime: true,
+    exposeInMcp: true,
+    description:
+      'Mengarahkan kamera peta interaktif Smart Kos dan membuka kartu Overview Lokasi secara langsung ke kos atau area kampus tertentu. WAJIB dipanggil setiap kali pengguna berpindah menanyakan kos lain atau meminta melihat lokasi suatu kos di peta.',
+    schema: z.object({
+      accommodationId: z
+        .string()
+        .max(120)
+        .optional()
+        .describe('ID kos spesifik bila sudah diketahui, misal "kos-utb-1" atau "kos-telkom-2"'),
+      query: z
+        .string()
+        .max(200)
+        .optional()
+        .describe('Nama kos, area, atau kampus yang ingin difokuskan di peta, misal "Mekarwangi Putri" atau "UTB"'),
+    }),
+    async handler({ accommodationId, query }) {
+      const lookup = accommodationId || query;
+      if (!lookup) {
+        throw badRequest('Berikan accommodationId atau query nama kos/kampus untuk mengarahkan peta');
+      }
+      const kos = await accommodationsService.resolveAccommodation(lookup);
+      if (!kos) {
+        throw notFound(`Lokasi kos untuk '${lookup}' tidak ditemukan di katalog TERALIO`);
+      }
+      return {
+        accommodation: kos,
+        campusId: kos.campusId,
+        uiAction: {
+          type: 'focus_map',
+          nav: 'discovery',
+          campusId: kos.campusId,
+          targetKos: kos,
+        },
+      };
+    },
+  },
+  {
+    name: 'teralio_get_current_datetime',
+    title: 'Cek Waktu & Tanggal Hari Ini (WIB)',
+    category: 'schedule',
+    exposeInResponses: true,
+    exposeInRealtime: true,
+    exposeInMcp: true,
+    description:
+      'Mengambil tanggal hari ini, hari dalam seminggu, jam saat ini (WIB / Asia/Jakarta), serta daftar tanggal 10 hari ke depan (besok, lusa, dll.) untuk penjadwalan survei kos yang akurat.',
+    schema: z.object({}),
+    async handler() {
+      return getCurrentWibContext();
+    },
+  },
+  {
+    name: 'teralio_list_visit_schedules',
+    title: 'Daftar Jadwal Janji Temu / Visit Schedule',
+    category: 'schedule',
+    exposeInResponses: true,
+    exposeInRealtime: true,
+    exposeInMcp: true,
+    description:
+      'Mengambil daftar janji temu / jadwal kunjungan survei kos pengguna beserta waktu hari ini. Set openSchedulePage=true bila pengguna meminta membuka halaman Visit Schedule.',
+    schema: z.object({
+      status: z.string().max(40).optional().describe('Filter status opsional, misal "Terjadwal"'),
+      openSchedulePage: z
+        .boolean()
+        .optional()
+        .describe('Buka halaman Visit Schedule di layar pengguna (default false kecuali diminta melihat jadwal)'),
+    }),
+    async handler({ status, openSchedulePage = false }) {
+      const result = await accommodationsService.listSurveyBookings();
+      let items = result.items || [];
+      if (status) {
+        const lower = status.toLowerCase();
+        items = items.filter((b) => String(b.status || '').toLowerCase().includes(lower));
+      }
+      return {
+        currentTime: getCurrentWibContext(),
+        totalCount: items.length,
+        bookings: items,
+        uiAction: openSchedulePage
+          ? {
+              type: 'open_schedule',
+              nav: 'schedule',
+              selectedDate: items[0]?.scheduledIso || null,
+              highlightBookingId: items[0]?.id || null,
+            }
+          : null,
+      };
+    },
+  },
+  {
+    name: 'teralio_create_visit_schedule',
+    title: 'Buat Janji Temu Kunjungan Kos (Visit Schedule)',
+    category: 'schedule',
+    exposeInResponses: true,
+    exposeInRealtime: true,
+    exposeInMcp: true,
+    description:
+      'Membuat jadwal janji temu / booking survei kunjungan kos pada tanggal dan jam tertentu, lalu otomatis mengarahkan (redirect) layar pengguna ke halaman kalender Visit Schedule.',
+    schema: z.object({
+      accommodationId: z
+        .string()
+        .max(120)
+        .optional()
+        .describe('ID kos yang ingin dikunjungi, misal "kos-utb-1"'),
+      accommodationName: z
+        .string()
+        .max(200)
+        .optional()
+        .describe('Nama kos atau kata kunci kos bila ID belum diketahui, misal "Soekarno Hatta 378 Student Residence"'),
+      visitDate: z
+        .string()
+        .max(60)
+        .optional()
+        .describe('Tanggal kunjungan format YYYY-MM-DD atau kata relatif seperti "hari ini", "besok", "lusa", "Sabtu"'),
+      visitTime: z
+        .string()
+        .max(60)
+        .optional()
+        .describe('Jam kunjungan dalam WIB, misal "10:00", "14:00 WIB", "jam 4 sore"'),
+      visitorName: z.string().max(120).optional().describe('Nama pengunjung opsional'),
+      notes: z.string().max(300).optional().describe('Catatan tambahan untuk pemilik kos'),
+      redirectToSchedule: z
+        .boolean()
+        .optional()
+        .describe('Otomatis arahkan layar ke halaman Visit Schedule setelah booking dibuat (default true)'),
+    }),
+    async handler({
+      accommodationId,
+      accommodationName,
+      visitDate,
+      visitTime,
+      visitorName,
+      notes,
+      redirectToSchedule = true,
+    }) {
+      if (!accommodationId && !accommodationName) {
+        throw badRequest('Sebutkan accommodationId atau accommodationName kos yang ingin dijadwalkan survei');
+      }
+      const created = await accommodationsService.createSurveyBooking({
+        accommodationId,
+        accommodationName,
+        visitDate,
+        visitTime,
+        visitorName,
+        notes,
+      });
+      return {
+        source: created.source,
+        booking: created.booking,
+        currentTime: getCurrentWibContext(),
+        uiAction: redirectToSchedule
+          ? {
+              type: 'open_schedule',
+              nav: 'schedule',
+              highlightBookingId: created.booking.id,
+              selectedDate: created.booking.scheduledIso,
+              booking: created.booking,
+            }
+          : null,
+      };
+    },
+  },
+  {
+    name: 'teralio_update_visit_schedule',
+    title: 'Ubah Jam / Tanggal / Status Janji Temu Kos',
+    category: 'schedule',
+    exposeInResponses: true,
+    exposeInRealtime: true,
+    exposeInMcp: true,
+    description:
+      'Mengubah jam temu, mengganti tanggal kunjungan, memperbarui catatan, atau membatalkan jadwal janji temu survei kos yang sudah ada.',
+    schema: z.object({
+      bookingId: z
+        .string()
+        .max(120)
+        .optional()
+        .describe('ID jadwal booking bila diketahui (jika kosong akan mencocokkan berdasarkan nama kos atau jadwal terbaru)'),
+      accommodationName: z
+        .string()
+        .max(200)
+        .optional()
+        .describe('Nama kos dari jadwal yang ingin diubah'),
+      newDate: z
+        .string()
+        .max(60)
+        .optional()
+        .describe('Tanggal baru format YYYY-MM-DD atau relatif ("besok", "lusa", "Minggu")'),
+      newTime: z
+        .string()
+        .max(60)
+        .optional()
+        .describe('Jam temu baru dalam WIB, misal "15:30 WIB" atau "jam 3 sore"'),
+      status: z
+        .enum(['Terjadwal', 'Diubah', 'Selesai', 'Dibatalkan'])
+        .optional()
+        .describe('Status baru janji temu'),
+      notes: z.string().max(300).optional().describe('Catatan baru opsional'),
+      redirectToSchedule: z
+        .boolean()
+        .optional()
+        .describe('Arahkan layar ke halaman Visit Schedule untuk menampilkan perubahan (default true)'),
+    }),
+    async handler({
+      bookingId,
+      accommodationName,
+      newDate,
+      newTime,
+      status,
+      notes,
+      redirectToSchedule = true,
+    }) {
+      const updated = await accommodationsService.updateSurveyBooking(bookingId, {
+        accommodationName,
+        newDate,
+        newTime,
+        status: status || (newDate || newTime ? 'Diubah' : undefined),
+        notes,
+      });
+      return {
+        source: updated.source,
+        booking: updated.booking,
+        uiAction: redirectToSchedule
+          ? {
+              type: 'open_schedule',
+              nav: 'schedule',
+              highlightBookingId: updated.booking.id,
+              selectedDate: updated.booking.scheduledIso,
+              booking: updated.booking,
+            }
+          : null,
+      };
     },
   },
   {

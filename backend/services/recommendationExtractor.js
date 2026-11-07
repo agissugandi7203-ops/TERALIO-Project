@@ -32,7 +32,7 @@ const BOILERPLATE_TITLES = [
 ];
 
 const ACCOMMODATION_SIGNAL_REGEX =
-  /\b(kos|kost|hunian|asrama|boarding|residence|apartemen|paviliun|wisma|kamar|kontrakan|guest\s*house|penginapan|jalan|jl\.|bandung|jakarta|depok|yogyakarta|malang|surabaya|kampus|universitas|itb|unpad|telkom|ugm|ui)\b/i;
+  /\b(kos|kost|hunian|asrama|boarding|residence|apartemen|paviliun|wisma|kamar|kontrakan|guest\s*house|penginapan|jalan|jl\.|bandung|jakarta|depok|yogyakarta|malang|surabaya|kampus|universitas|utb|itb|unpad|telkom|ugm|ui)\b/i;
 
 const cleanString = (val) => (typeof val === 'string' && val.trim() !== '' ? val.trim() : null);
 
@@ -299,7 +299,13 @@ export function extractVerifiedRecommendations(executions = []) {
         const prev = byId.get(normalized.id);
         byId.set(normalized.id, prev ? mergePlaceRecord(prev, normalized) : normalized);
       }
-    } else if (toolName === 'teralio_get_accommodation_details') {
+    } else if (
+      toolName === 'teralio_get_accommodation_details' ||
+      toolName === 'teralio_focus_map_location'
+    ) {
+      if (cleanString(args.query)) {
+        latestQueryContext = cleanString(args.query);
+      }
       const normalized = normalizeTeralioAccommodation(data.accommodation);
       if (normalized) {
         const prev = byId.get(normalized.id);

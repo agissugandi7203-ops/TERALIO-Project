@@ -286,6 +286,8 @@ export function ChatWorkspace({
       bufferedDeltaRef.current = '';
       setIsStreaming(true);
 
+      const requestStartTime = performance.now();
+
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
@@ -377,6 +379,25 @@ export function ChatWorkspace({
                       mergedCitations.push({ title: src.title || null, url: src.url });
                     }
                   }
+
+                  const elapsedSeconds = Number(
+                    Math.max(0.2, (performance.now() - requestStartTime) / 1000).toFixed(1),
+                  );
+                  const outputTokens =
+                    donePayload?.metrics?.outputTokens ||
+                    donePayload?.usage?.output_tokens ||
+                    Math.max(1, Math.round(finalContent.length / 3.8));
+                  const throughput =
+                    donePayload?.metrics?.throughput ||
+                    Number((outputTokens / elapsedSeconds).toFixed(1));
+
+                  const metrics = {
+                    elapsedSeconds,
+                    outputTokens,
+                    throughput,
+                    isDeepThinking: thinkingEnabled,
+                  };
+
                   return {
                     ...m,
                     content: finalContent,
@@ -384,6 +405,7 @@ export function ChatWorkspace({
                     status: 'completed',
                     orbState: null,
                     statusLabel: null,
+                    metrics,
                   };
                 }),
               );

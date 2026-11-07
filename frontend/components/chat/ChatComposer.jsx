@@ -64,6 +64,11 @@ export function ChatComposer({
   const adjustTextareaHeight = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
+    if (!el.value) {
+      el.style.height = '24px';
+      el.style.overflowY = 'hidden';
+      return;
+    }
     el.style.height = 'auto';
     const scrollHeight = el.scrollHeight || 24;
     const bounded = Math.min(scrollHeight, MAX_TEXTAREA_HEIGHT);

@@ -9,8 +9,6 @@ import {
   MapPin,
   Navigation,
   Phone,
-  ShieldCheck,
-  Sparkles,
   Star,
   X,
 } from 'lucide-react';
@@ -49,6 +47,7 @@ function buildDynamicSurveySlots(visitingHoursStr = '') {
     const dayLabel = dayOffset === 1 ? `Besok (${formatter.format(d)})` : formatter.format(d);
     return {
       isoDate,
+      timeWib: times[idx],
       label: `${dayLabel} • ${times[idx]}`,
     };
   });
@@ -61,9 +60,9 @@ function renderDynamicStars(ratingValue = 4.8) {
     return (
       <Star
         key={starIndex}
-        size={13}
-        fill={filled ? '#f59e0b' : 'none'}
-        color={filled ? '#f59e0b' : '#cbd5e1'}
+        size={12}
+        fill={filled ? '#fbbc04' : 'none'}
+        color={filled ? '#fbbc04' : '#dadce0'}
         data-star-filled={filled ? 'true' : 'false'}
       />
     );
@@ -75,14 +74,13 @@ export function KosPlaceOverviewCard({
   campus,
   route,
   userName = 'Mahasiswa TERALIO',
-  dataSource = 'supabase',
   showRouteLine = true,
   onToggleRouteLine,
   onFocusOnMap,
   onSurveyBooked,
+  onOpenSchedule,
   onClose,
 }) {
-  const [activeTab, setActiveTab] = useState('overview');
   const [savedIds, setSavedIds] = useState(() => readSavedKosIds());
   const [showSurveyBox, setShowSurveyBox] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
@@ -91,7 +89,6 @@ export function KosPlaceOverviewCard({
   const [copiedPhone, setCopiedPhone] = useState(false);
 
   useEffect(() => {
-    setActiveTab('overview');
     setShowSurveyBox(false);
     setBookedRecord(null);
     setBookingError(null);
@@ -120,11 +117,6 @@ export function KosPlaceOverviewCard({
       return next;
     });
   };
-
-  const palette =
-    Array.isArray(kos.accentPalette) && kos.accentPalette.length >= 2
-      ? kos.accentPalette
-      : ['#1d4ed8', '#38bdf8'];
 
   const ratingValue = typeof kos.rating === 'number' ? kos.rating : 4.8;
   const reviewItems = Array.isArray(kos.reviews) ? kos.reviews : [];
@@ -167,6 +159,7 @@ export function KosPlaceOverviewCard({
         contactPhone: ownerPhone || '',
         scheduledLabel: slot.label,
         scheduledIso: slot.isoDate,
+        scheduledTime: slot.timeWib,
         visitorName: userName,
       });
       setBookedRecord(created);
@@ -180,44 +173,19 @@ export function KosPlaceOverviewCard({
 
   return (
     <aside
-      className="kos-place-overview"
+      className="kos-place-overview is-gmaps-minimal"
       aria-label={`Overview Lokasi ${kos.name}`}
       data-testid="kos-place-overview"
     >
-      {/* 1. Hero Architectural Banner */}
-      <div
-        className="kos-place-overview__hero"
-        style={{
-          background: `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 100%)`,
-        }}
-      >
-        <svg
-          className="kos-place-overview__hero-art"
-          viewBox="0 0 400 170"
-          fill="none"
-          aria-hidden="true"
-        >
-          <rect x="24" y="34" width="142" height="112" rx="14" stroke="rgba(255,255,255,0.22)" strokeWidth="2" />
-          <rect x="42" y="52" width="58" height="44" rx="6" fill="rgba(255,255,255,0.14)" />
-          <rect x="190" y="22" width="184" height="124" rx="16" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          <path d="M190 98H374" stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
-          <circle cx="332" cy="58" r="18" fill="rgba(255,255,255,0.16)" />
-        </svg>
-
-        <div className="kos-place-overview__hero-top">
-          <div className="kos-place-overview__hero-badges">
-            <span className="kos-overview-pill is-glass">Kos {kos.type || 'Putra / Putri'}</span>
-            {kos.verified !== false && (
-              <span className="kos-overview-pill is-verified">
-                <ShieldCheck size={12} />
-                <span>{dataSource === 'supabase' ? 'Supabase Live' : 'Supabase Sync'}</span>
-              </span>
-            )}
-          </div>
-
+      {/* Header Minimalis Khas Google Maps */}
+      <div className="kos-gmaps-card__header">
+        <div className="kos-gmaps-card__title-row">
+          <h3 className="kos-gmaps-card__title" data-testid="place-overview-title">
+            {kos.name}
+          </h3>
           <button
             type="button"
-            className="kos-place-overview__close"
+            className="kos-gmaps-card__close"
             onClick={onClose}
             aria-label="Tutup overview kos"
             data-testid="close-place-overview-btn"
@@ -226,118 +194,78 @@ export function KosPlaceOverviewCard({
           </button>
         </div>
 
-        <div className="kos-place-overview__hero-bottom">
-          <span className="kos-overview-match-badge">
-            <Sparkles size={12} />
-            <span>{kos.tag || `Match ${kos.matchScore || 95}%`}</span>
-          </span>
-          {kos.area && <span className="kos-overview-area-tag">{kos.area}</span>}
-        </div>
-      </div>
-
-      {/* 2. Identity, Dynamic Rating, & Price Summary */}
-      <div className="kos-place-overview__identity">
-        <h3 className="kos-place-overview__title" data-testid="place-overview-title">
-          {kos.name}
-        </h3>
-
-        <div className="kos-place-overview__rating-row">
-          <span className="kos-place-overview__rating-num" data-testid="place-overview-rating">
+        <div className="kos-gmaps-card__meta">
+          <span className="kos-gmaps-card__rating" data-testid="place-overview-rating">
             {ratingValue.toFixed(1)}
           </span>
-          <span className="kos-place-overview__stars" aria-hidden="true">
+          <span className="kos-gmaps-card__stars" aria-hidden="true">
             {renderDynamicStars(ratingValue)}
           </span>
-          {reviewsCount > 0 && (
-            <span className="kos-place-overview__reviews-count">({reviewsCount} ulasan)</span>
-          )}
-          {roomsLeft !== null && (
-            <>
-              <span className="kos-place-overview__dot">•</span>
-              <span className="kos-place-overview__rooms-badge">Tersisa {roomsLeft} kamar</span>
-            </>
-          )}
+          {reviewsCount > 0 && <span className="kos-gmaps-card__muted">({reviewsCount})</span>}
+          <span className="kos-gmaps-card__dot">·</span>
+          <span className="kos-gmaps-card__muted">Kos {kos.type || 'Putra / Putri'}</span>
         </div>
 
-        <div className="kos-place-overview__price-row">
-          <strong className="kos-place-overview__price">{kos.price}</strong>
-          <button
-            type="button"
-            className="kos-place-overview__recenter-link"
-            onClick={() => onFocusOnMap?.(kos)}
-          >
-            <MapPin size={12} />
-            <span>Pusatkan Pin</span>
-          </button>
+        <div className="kos-gmaps-card__price-line">
+          <strong className="kos-gmaps-card__price">{kos.price}</strong>
+          {roomsLeft !== null && (
+            <span className="kos-gmaps-card__rooms">Sisa {roomsLeft} kamar</span>
+          )}
         </div>
       </div>
 
-      {/* 3. In-Platform Quick Actions (100% Native di dalam TERALIO) */}
-      <div className="kos-place-overview__actions" role="group" aria-label="Aksi Cepat Lokasi Kos">
+      {/* Deretan Pill Action Khas Google Maps */}
+      <div className="kos-gmaps-card__pills" role="group" aria-label="Aksi Cepat Lokasi Kos">
         <button
           type="button"
-          className={`kos-overview-action-btn ${showRouteLine ? 'is-primary' : ''}`}
+          className={`kos-gmaps-pill ${showRouteLine ? 'is-filled' : ''}`}
           onClick={() => {
             onToggleRouteLine?.();
-            setActiveTab('overview');
+            onFocusOnMap?.(kos);
           }}
           data-testid="overview-action-route"
         >
-          <span className="kos-overview-action-btn__icon">
-            <Navigation size={16} />
-          </span>
-          <span>Rute Kampus</span>
+          <Navigation size={14} />
+          <span>Rute</span>
         </button>
 
         <button
           type="button"
-          className={`kos-overview-action-btn ${showSurveyBox || bookedRecord ? 'is-active' : ''}`}
+          className={`kos-gmaps-pill ${showSurveyBox || bookedRecord ? 'is-tonal' : ''}`}
           onClick={() => setShowSurveyBox((prev) => !prev)}
           data-testid="overview-action-survey"
         >
-          <span className="kos-overview-action-btn__icon">
-            <CalendarCheck size={16} />
-          </span>
+          <CalendarCheck size={14} />
           <span>Survei Kos</span>
         </button>
 
         <button
           type="button"
-          className="kos-overview-action-btn"
-          onClick={() => {
-            setActiveTab('overview');
-            handleCopyPhone();
-          }}
+          className="kos-gmaps-pill"
+          onClick={handleCopyPhone}
           disabled={!ownerPhone}
           data-testid="overview-action-contact"
         >
-          <span className="kos-overview-action-btn__icon">
-            <Phone size={16} />
-          </span>
+          <Phone size={14} />
           <span>{copiedPhone ? 'Tersalin' : 'Kontak'}</span>
         </button>
 
         <button
           type="button"
-          className={`kos-overview-action-btn ${isSaved ? 'is-active' : ''}`}
+          className={`kos-gmaps-pill ${isSaved ? 'is-tonal' : ''}`}
           onClick={handleToggleSave}
           data-testid="overview-action-save"
         >
-          <span className="kos-overview-action-btn__icon">
-            <Bookmark size={16} fill={isSaved ? 'currentColor' : 'none'} />
-          </span>
+          <Bookmark size={14} fill={isSaved ? 'currentColor' : 'none'} />
           <span>{isSaved ? 'Tersimpan' : 'Simpan'}</span>
         </button>
       </div>
 
-      {/* Dynamic Survey Booking Drawer */}
+      {/* Inline Survey Slot Picker (Ringkas & Bersih) */}
       {showSurveyBox && (
-        <div className="kos-place-overview__survey-box" data-testid="overview-survey-box">
-          <div className="kos-place-overview__survey-head">
-            <strong>Jadwalkan Survei ke {kos.name}</strong>
-            <span>Otomatis tersimpan ke menu Schedule &amp; Supabase</span>
-          </div>
-          <div className="kos-place-overview__survey-slots">
+        <div className="kos-gmaps-card__survey" data-testid="overview-survey-box">
+          <span className="kos-gmaps-card__survey-label">Pilih jadwal kunjungan survei:</span>
+          <div className="kos-gmaps-card__survey-slots">
             {dynamicSlots.map((slot) => {
               const selected = bookedRecord?.scheduledLabel === slot.label;
               return (
@@ -345,188 +273,86 @@ export function KosPlaceOverviewCard({
                   key={slot.label}
                   type="button"
                   disabled={isBooking}
-                  className={`kos-survey-slot-btn ${selected ? 'is-booked' : ''}`}
+                  className={`kos-gmaps-slot-btn ${selected ? 'is-booked' : ''}`}
                   onClick={() => handleBookSlot(slot)}
                   data-testid="overview-survey-slot-btn"
                 >
-                  {selected ? <Check size={13} /> : null}
+                  {selected ? <Check size={12} /> : null}
                   <span>{slot.label}</span>
                 </button>
               );
             })}
           </div>
-          {bookingError && <p className="kos-place-overview__survey-error">{bookingError}</p>}
+          {bookingError && <p className="kos-gmaps-card__survey-err">{bookingError}</p>}
           {bookedRecord && (
-            <p className="kos-place-overview__survey-confirm" data-testid="overview-survey-confirmed">
-              ✓ Terjadwal pada <strong>{bookedRecord.scheduledLabel}</strong> bersama {ownerName}.
-            </p>
+            <div className="kos-gmaps-card__survey-ok" data-testid="overview-survey-confirmed">
+              <span>
+                ✓ Terjadwal <strong>{bookedRecord.scheduledLabel}</strong>
+              </span>
+              {onOpenSchedule && (
+                <button
+                  type="button"
+                  className="kos-gmaps-card__schedule-link"
+                  onClick={() => onOpenSchedule(bookedRecord)}
+                >
+                  Buka Kalender →
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
 
-      {/* 4. Interactive Place Overview Tabs */}
-      <div className="kos-place-overview__tabs" role="tablist" aria-label="Detail Informasi Kos">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'overview'}
-          className={`kos-overview-tab ${activeTab === 'overview' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-          data-testid="overview-tab-summary"
-        >
-          Ringkasan
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'facilities'}
-          className={`kos-overview-tab ${activeTab === 'facilities' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('facilities')}
-          data-testid="overview-tab-facilities"
-        >
-          Fasilitas &amp; Sekitar
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'reviews'}
-          className={`kos-overview-tab ${activeTab === 'reviews' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('reviews')}
-          data-testid="overview-tab-reviews"
-        >
-          Ulasan ({reviewItems.length})
-        </button>
-      </div>
-
-      {/* 5. Scrollable Tab Body */}
-      <div className="kos-place-overview__body">
-        {activeTab === 'overview' && (
-          <div className="kos-overview-section">
-            {campus && (
-              <div className="kos-overview-route-card" data-testid="overview-route-metrics">
-                <div className="kos-overview-route-card__icon">
-                  <Footprints size={17} />
-                </div>
-                <div className="kos-overview-route-card__info">
-                  <strong>
-                    {route?.distanceText || kos.distance} ke {campus.shortName || campus.name}
-                  </strong>
-                  <span>
-                    {route
-                      ? `~${route.walkMinutes} mnt jalan kaki • ~${route.rideMinutes} mnt naik motor`
-                      : 'Rute jalan kaki langsung ditampilkan di peta'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {kos.description && <p className="kos-overview-description">{kos.description}</p>}
-
-            <div className="kos-overview-info-list">
-              {kos.address && (
-                <div className="kos-overview-info-row">
-                  <MapPin size={15} className="kos-overview-info-icon" />
-                  <div>
-                    <span className="kos-overview-info-label">Alamat Lengkap</span>
-                    <p>{kos.address}</p>
-                  </div>
-                </div>
-              )}
-
-              {kos.visitingHours && (
-                <div className="kos-overview-info-row">
-                  <Clock size={15} className="kos-overview-info-icon" />
-                  <div>
-                    <span className="kos-overview-info-label">Jam Kunjungan Survei</span>
-                    <p>{kos.visitingHours}</p>
-                  </div>
-                </div>
-              )}
-
-              {ownerPhone && (
-                <div className="kos-overview-info-row">
-                  <Phone size={15} className="kos-overview-info-icon" />
-                  <div className="kos-overview-contact-flex">
-                    <div>
-                      <span className="kos-overview-info-label">{ownerName}</span>
-                      <p>{ownerPhone}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="kos-overview-copy-btn"
-                      onClick={handleCopyPhone}
-                    >
-                      {copiedPhone ? <Check size={13} /> : <Copy size={13} />}
-                      <span>{copiedPhone ? 'Disalin' : 'Salin'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {Array.isArray(kos.features) && kos.features.length > 0 && (
-              <div className="kos-overview-block">
-                <h4 className="kos-overview-subhead">Fasilitas Unggulan</h4>
-                <div className="kos-overview-chips">
-                  {kos.features.map((feat, idx) => (
-                    <span key={idx} className="kos-overview-chip">
-                      ✓ {feat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Detail Ringkas Satu Kolom Khas Google Maps */}
+      <div className="kos-gmaps-card__details">
+        {kos.address && (
+          <div className="kos-gmaps-card__row">
+            <MapPin size={15} className="kos-gmaps-card__icon" />
+            <span>{kos.address}</span>
           </div>
         )}
 
-        {activeTab === 'facilities' && (
-          <div className="kos-overview-section">
-            <h4 className="kos-overview-subhead">Fasilitas Kamar &amp; Gedung</h4>
-            <div className="kos-overview-chips">
-              {(kos.features || []).map((feat, idx) => (
-                <span key={idx} className="kos-overview-chip">
-                  ✓ {feat}
-                </span>
-              ))}
-            </div>
-
-            {Array.isArray(kos.nearbyLandmarks) && kos.nearbyLandmarks.length > 0 && (
-              <>
-                <h4 className="kos-overview-subhead" style={{ marginTop: '1rem' }}>
-                  Titik Penting di Sekitar Kos
-                </h4>
-                <div className="kos-overview-landmarks">
-                  {kos.nearbyLandmarks.map((lm, idx) => (
-                    <div key={idx} className="kos-overview-landmark-item">
-                      <span className="kos-overview-landmark-name">{lm.name}</span>
-                      <span className="kos-overview-landmark-dist">{lm.distance}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+        {campus && (
+          <div className="kos-gmaps-card__row" data-testid="overview-route-metrics">
+            <Footprints size={15} className="kos-gmaps-card__icon" />
+            <span>
+              {route?.distanceText || kos.distance} ke {campus.shortName || campus.name}
+              {route?.walkMinutes ? ` (${route.walkMinutes} mnt jalan kaki)` : ''}
+            </span>
           </div>
         )}
 
-        {activeTab === 'reviews' && (
-          <div className="kos-overview-section">
-            {reviewItems.length === 0 ? (
-              <p className="kos-overview-empty-reviews">
-                Belum ada ulasan tertulis untuk hunian ini di database.
-              </p>
-            ) : (
-              <div className="kos-overview-reviews-list">
-                {reviewItems.map((rev, idx) => (
-                  <article key={idx} className="kos-overview-review-card">
-                    <div className="kos-overview-review-head">
-                      <strong>{rev.author}</strong>
-                      <span>★ {rev.rating || 5}.0</span>
-                    </div>
-                    <p>{rev.comment}</p>
-                  </article>
-                ))}
-              </div>
-            )}
+        {kos.visitingHours && (
+          <div className="kos-gmaps-card__row">
+            <Clock size={15} className="kos-gmaps-card__icon" />
+            <span>{kos.visitingHours}</span>
+          </div>
+        )}
+
+        {ownerPhone && (
+          <div className="kos-gmaps-card__row is-contact">
+            <Phone size={15} className="kos-gmaps-card__icon" />
+            <span className="kos-gmaps-card__contact-text">
+              {ownerPhone} · {ownerName}
+            </span>
+            <button
+              type="button"
+              className="kos-gmaps-card__copy"
+              onClick={handleCopyPhone}
+              aria-label="Salin nomor telepon"
+            >
+              {copiedPhone ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          </div>
+        )}
+
+        {Array.isArray(kos.features) && kos.features.length > 0 && (
+          <div className="kos-gmaps-card__tags">
+            {kos.features.slice(0, 4).map((feat, idx) => (
+              <span key={idx} className="kos-gmaps-card__tag">
+                {feat}
+              </span>
+            ))}
           </div>
         )}
       </div>
