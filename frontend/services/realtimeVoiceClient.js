@@ -77,6 +77,8 @@ export class RealtimeVoiceClient {
     this.disposed = false;
     this.shouldAutoGreet = true;
     this.hasSentInitialGreeting = false;
+    this.isGreetingPhase = false;
+    this.greetingMuteTimeout = null;
   }
 
   emitState(statePatch) {
@@ -88,6 +90,22 @@ export class RealtimeVoiceClient {
     if (this.disposed || !this.shouldAutoGreet || this.hasSentInitialGreeting) return;
     if (!this.dc || this.dc.readyState !== 'open') return;
     this.hasSentInitialGreeting = true;
+    this.isGreetingPhase = true;
+
+    // Redam sementara mikrofon lokal saat greeting awal agar speaker HP/laptop tidak memantul ke mic
+    if (this.localStream) {
+      for (const track of this.localStream.getAudioTracks()) {
+        track.enabled = false;
+      }
+    }
+
+    if (this.greetingMuteTimeout) {
+      clearTimeout(this.greetingMuteTimeout);
+    }
+    this.greetingMuteTimeout = setTimeout(() => {
+      this.finishGreetingPhase();
+    }, 3500);
+
     this.sendClientEvent({
       type: 'response.create',
       response: {
@@ -95,6 +113,19 @@ export class RealtimeVoiceClient {
           'Sapa pengguna secara singkat, ramah, dan natural dalam Bahasa Indonesia (cukup 1-2 kalimat pendek), lalu tanyakan apakah ingin dicarikan kos (misal sekitar UTB, Telkom, atau ITB) atau mengatur jadwal kunjungan survei.',
       },
     });
+  }
+
+  finishGreetingPhase() {
+    if (this.greetingMuteTimeout) {
+      clearTimeout(this.greetingMuteTimeout);
+      this.greetingMuteTimeout = null;
+    }
+    this.isGreetingPhase = false;
+    if (!this.disposed && this.localStream) {
+      for (const track of this.localStream.getAudioTracks()) {
+        track.enabled = !this.isMuted;
+      }
+    }
   }
 
   async connect({ userContext, reasoningEffort = 'low', voice, autoGreet = true } = {}) {
@@ -184,15 +215,15 @@ export class RealtimeVoiceClient {
 
     try {
       // 1. Minta ephemeral client secret dari backend (tanpa mengekspos OPENAI_API_KEY)
-      // Gunakan server_vad dengan threshold 0.55, silence_duration 1000ms & near_field agar tidak mudah terpotong bising sekitar!
+      // Gunakan server_vad dengan threshold 0.78, silence_duration 1200ms & near_field agar tidak mudah terpotong bising sekitar atau pantulan speaker
       const tokenRes = await fetch('/api/realtime/client-secrets', {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           turnDetection: 'server_vad',
-          vadThreshold: 0.55,
-          vadSilenceDurationMs: 1000,
-          vadPrefixPaddingMs: 400,
+          vadThreshold: 0.78,
+          vadSilenceDurationMs: 1200,
+          vadPrefixPaddingMs: 300,
           noiseReduction: 'near_field',
           reasoningEffort: reasoningEffort === 'high' ? 'high' : 'low',
           enableTools: true,
@@ -478,6 +509,10 @@ export class RealtimeVoiceClient {
         break;
 
       case 'input_audio_buffer.speech_started':
+        if (this.isGreetingPhase) {
+          // Abaikan deteksi suara selama fase awal sapaan agar AI tidak terinterupsi oleh pantulan speakernya sendiri
+          break;
+        }
         this.isAiSpeaking = false;
         this.emitState({
           phase: 'user_speaking',
@@ -611,6 +646,7 @@ export class RealtimeVoiceClient {
 
       case 'output_audio_buffer.stopped':
       case 'response.done':
+        this.finishGreetingPhase();
         this.isAiSpeaking = false;
         this.emitState({
           phase: 'listening',
@@ -623,7 +659,16 @@ export class RealtimeVoiceClient {
         break;
 
       case 'output_audio_buffer.cleared':
+        this.finishGreetingPhase();
         this.isAiSpeaking = false;
+        if (this.audioEl) {
+          try {
+            this.audioEl.pause?.();
+            this.audioEl.currentTime = 0;
+          } catch {
+            // ignore
+          }
+        }
         this.emitState({
           phase: 'interrupted',
           orbState: 'idle',
@@ -746,6 +791,11 @@ export class RealtimeVoiceClient {
     this.disposed = true;
     this.isConnected = false;
     this.isAiSpeaking = false;
+    if (this.greetingMuteTimeout) {
+      clearTimeout(this.greetingMuteTimeout);
+      this.greetingMuteTimeout = null;
+    }
+    this.isGreetingPhase = false;
     if (activeGlobalVoiceClient === this) {
       activeGlobalVoiceClient = null;
     }
@@ -799,6 +849,7 @@ export class RealtimeVoiceClient {
       try {
         this.audioEl.pause?.();
         this.audioEl.srcObject = null;
+        this.audioEl.load?.();
       } catch {
         // ignore
       }

@@ -1682,6 +1682,26 @@
   flex-wrap: wrap;
 }
 
+.visit-schedule-mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 900px) {
+  .visit-schedule-mobile-menu-btn {
+    display: inline-flex;
+  }
+}
+
 .visit-schedule-eyebrow {
   font-size: 0.72rem;
   font-weight: 700;

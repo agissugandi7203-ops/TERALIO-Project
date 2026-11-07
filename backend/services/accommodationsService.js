@@ -1016,14 +1016,17 @@ export const accommodationsService = {
   /**
    * Mengambil daftar jadwal survei kos dari tabel `public.survey_bookings` di Supabase (atau store runtime aktif).
    */
-  async listSurveyBookings() {
+  async listSurveyBookings(filter = {}) {
+    const filterUserId = filter?.userId ? String(filter.userId).trim() : null;
+
     if (isSupabaseConfigured() && Date.now() >= missingBookingsBackoffUntil) {
       try {
         const supabase = getSupabaseClient();
-        const { data, error } = await supabase
-          .from('survey_bookings')
-          .select('*')
-          .order('created_at', { ascending: false });
+        let query = supabase.from('survey_bookings').select('*');
+        if (filterUserId) {
+          query = query.or(`user_id.eq.${filterUserId},user_id.is.null`);
+        }
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
           if (error.code === 'PGRST205' || /survey_bookings/i.test(error.message || '')) {
@@ -1040,6 +1043,7 @@ export const accommodationsService = {
               const timeWib = normalizeVisitTimeWib(row.scheduled_time || row.scheduled_label || '10:00 WIB');
               return {
                 id: row.id,
+                userId: row.user_id || null,
                 accommodationId: row.accommodation_id,
                 accommodationName: row.accommodation_name,
                 campusName: row.campus_name,
@@ -1062,9 +1066,13 @@ export const accommodationsService = {
       }
     }
 
+    const filteredItems = filterUserId
+      ? runtimeBookings.filter((b) => !b.userId || b.userId === filterUserId)
+      : [...runtimeBookings];
+
     return {
       source: 'runtime-store',
-      items: [...runtimeBookings],
+      items: filteredItems,
     };
   },
 
@@ -1091,6 +1099,7 @@ export const accommodationsService = {
 
     const record = {
       id,
+      userId: payload.userId ? String(payload.userId) : null,
       accommodationId: String(kos?.id || payload.accommodationId || 'kos-custom'),
       accommodationName: String(payload.accommodationName || kos?.name || 'Hunian Kos Teralio'),
       campusId: kos?.campusId || payload.campusId || null,
@@ -1116,6 +1125,7 @@ export const accommodationsService = {
           .insert([
             {
               id: record.id,
+              user_id: record.userId,
               accommodation_id: record.accommodationId,
               accommodation_name: record.accommodationName,
               campus_name: record.campusName,

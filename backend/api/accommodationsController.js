@@ -35,6 +35,7 @@ export const surveyBookingSchema = z.object({
   scheduledTime: z.string().max(40).optional(),
   notes: z.string().max(500).optional(),
   visitorName: z.string().max(120).optional(),
+  userId: z.string().max(120).optional(),
 });
 
 export const surveyBookingUpdateSchema = z.object({
@@ -197,7 +198,8 @@ export const accommodationsController = {
   // GET /api/accommodations/bookings
   async listBookings(req, res, next) {
     try {
-      const result = await accommodationsService.listSurveyBookings();
+      const userId = req.query.userId || req.user?.id || null;
+      const result = await accommodationsService.listSurveyBookings({ userId });
       return res.status(200).json({
         success: true,
         source: result.source,
@@ -216,7 +218,11 @@ export const accommodationsController = {
       if (!parsed.success) {
         return next(badRequest('Data jadwal survei tidak valid', parsed.error.issues));
       }
-      const result = await accommodationsService.createSurveyBooking(parsed.data);
+      const bookingPayload = {
+        ...parsed.data,
+        userId: parsed.data.userId || req.user?.id || req.body?.userId || null,
+      };
+      const result = await accommodationsService.createSurveyBooking(bookingPayload);
       return res.status(201).json({
         success: true,
         source: result.source,

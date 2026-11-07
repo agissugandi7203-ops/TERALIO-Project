@@ -11,6 +11,8 @@ export const ROUTES = Object.freeze({
   LOGIN: '/login',
   SIGNUP: '/signup',
   AUTH_CALLBACK: '/auth/callback',
+  SCHEDULE: '/schedule',
+  VISIT_SCHEDULE: '/visit-schedule',
 });
 
 export const PRIMARY_NAV_LINKS = Object.freeze([

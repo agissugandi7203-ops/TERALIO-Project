@@ -14,11 +14,13 @@ import {
 } from 'lucide-react';
 import { smartKosApi } from '../../services/smartKosApi.js';
 
-const SAVED_STORAGE_KEY = 'teralio_saved_kos_ids';
+function getSavedStorageKey(userId) {
+  return `teralio_saved_kos_ids_${userId || 'guest'}`;
+}
 
-function readSavedKosIds() {
+function readSavedKosIds(userId) {
   try {
-    const raw = localStorage.getItem(SAVED_STORAGE_KEY);
+    const raw = localStorage.getItem(getSavedStorageKey(userId));
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -73,7 +75,8 @@ export function KosPlaceOverviewCard({
   kos,
   campus,
   route,
-  userName = 'Mahasiswa TERALIO',
+  userName = 'Mahasiswa Teralio',
+  userId = null,
   showRouteLine = true,
   onToggleRouteLine,
   onFocusOnMap,
@@ -81,12 +84,16 @@ export function KosPlaceOverviewCard({
   onOpenSchedule,
   onClose,
 }) {
-  const [savedIds, setSavedIds] = useState(() => readSavedKosIds());
+  const [savedIds, setSavedIds] = useState(() => readSavedKosIds(userId));
   const [showSurveyBox, setShowSurveyBox] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [bookedRecord, setBookedRecord] = useState(null);
   const [bookingError, setBookingError] = useState(null);
   const [copiedPhone, setCopiedPhone] = useState(false);
+
+  useEffect(() => {
+    setSavedIds(readSavedKosIds(userId));
+  }, [userId]);
 
   useEffect(() => {
     setShowSurveyBox(false);
@@ -110,7 +117,7 @@ export function KosPlaceOverviewCard({
         ? prev.filter((id) => id !== kos.id)
         : [...prev, kos.id];
       try {
-        localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(getSavedStorageKey(userId), JSON.stringify(next));
       } catch {
         // ignore storage restrictions
       }
@@ -161,6 +168,7 @@ export function KosPlaceOverviewCard({
         scheduledIso: slot.isoDate,
         scheduledTime: slot.timeWib,
         visitorName: userName,
+        userId: userId || undefined,
       });
       setBookedRecord(created);
       onSurveyBooked?.(created);

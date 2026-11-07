@@ -930,6 +930,7 @@ export const DashboardPage = ({
             onOpenVoiceAssistant={openGlobalVoice}
             onViewKosOnMap={handleViewBookingOnMap}
             onBackToOverview={() => setActiveNav('home')}
+            onOpenMobileMenu={() => setMobileMenuOpen(true)}
           />
         )}
 

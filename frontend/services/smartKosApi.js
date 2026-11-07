@@ -51,8 +51,9 @@ export const smartKosApi = {
   /**
    * Mengambil daftar jadwal survei kos dinamis (`/api/accommodations/bookings`).
    */
-  async fetchSurveyBookings({ signal } = {}) {
-    const res = await fetch('/api/accommodations/bookings', {
+  async fetchSurveyBookings({ userId, signal } = {}) {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const res = await fetch(`/api/accommodations/bookings${qs}`, {
       method: 'GET',
       headers: buildAuthHeaders(),
       signal,

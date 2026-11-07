@@ -178,13 +178,25 @@ function AppShell() {
       currentPath === ROUTES.HOME ||
       currentPath === ROUTES.LOGIN ||
       currentPath === ROUTES.SIGNUP ||
-      currentPath === '/register'
+      currentPath === '/register' ||
+      currentPath === ROUTES.SCHEDULE ||
+      currentPath === ROUTES.VISIT_SCHEDULE ||
+      currentPath === '/schedule' ||
+      currentPath === '/visit-schedule'
     ) {
       return (
         <DashboardPage
           user={currentUser}
           onLogout={handleLogout}
           onNavigate={navigate}
+          initialNav={
+            currentPath === ROUTES.SCHEDULE ||
+            currentPath === ROUTES.VISIT_SCHEDULE ||
+            currentPath === '/schedule' ||
+            currentPath === '/visit-schedule'
+              ? 'schedule'
+              : undefined
+          }
         />
       );
     }
@@ -201,13 +213,27 @@ function AppShell() {
     );
   }
 
-  // Jika user mengakses /dashboard secara langsung, tetap render DashboardPage
-  if (currentPath === ROUTES.DASHBOARD) {
+  // Jika user mengakses /dashboard atau /schedule secara langsung (termasuk mode tamu/guest), render DashboardPage
+  if (
+    currentPath === ROUTES.DASHBOARD ||
+    currentPath === ROUTES.SCHEDULE ||
+    currentPath === ROUTES.VISIT_SCHEDULE ||
+    currentPath === '/schedule' ||
+    currentPath === '/visit-schedule'
+  ) {
     return (
       <DashboardPage
         user={currentUser}
         onLogout={handleLogout}
         onNavigate={navigate}
+        initialNav={
+          currentPath === ROUTES.SCHEDULE ||
+          currentPath === ROUTES.VISIT_SCHEDULE ||
+          currentPath === '/schedule' ||
+          currentPath === '/visit-schedule'
+            ? 'schedule'
+            : undefined
+        }
       />
     );
   }

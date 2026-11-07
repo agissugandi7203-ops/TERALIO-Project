@@ -8,6 +8,7 @@ import {
   Clock,
   Edit3,
   MapPin,
+  Menu,
   Phone,
   Plus,
   Trash2,
@@ -107,6 +108,7 @@ export function VisitScheduleView({
   onOpenVoiceAssistant,
   onViewKosOnMap,
   onBackToOverview,
+  onOpenMobileMenu,
 }) {
   const todayIso = useMemo(() => getTodayIsoWib(), []);
   const tomorrowIso = useMemo(() => getTomorrowIsoWib(), []);
@@ -292,6 +294,17 @@ export function VisitScheduleView({
       <header className="visit-schedule-header">
         <div className="visit-schedule-header__titles">
           <div className="visit-schedule-eyebrow-row">
+            {onOpenMobileMenu && (
+              <button
+                type="button"
+                className="visit-schedule-mobile-menu-btn"
+                onClick={onOpenMobileMenu}
+                aria-label="Buka menu navigasi"
+                data-testid="schedule-mobile-menu-btn"
+              >
+                <Menu size={16} />
+              </button>
+            )}
             <span className="visit-schedule-eyebrow">VISIT SCHEDULE</span>
             <span className="visit-schedule-wib-pill" data-testid="visit-schedule-wib-clock">
               <Clock size={12} />
