@@ -19,39 +19,39 @@ import {
 const ARCHITECTURE_STAGES = [
   {
     step: '01',
-    title: 'Full-Surface Solar Roof Synthesis',
+    title: 'Accommodation Discovery Berbasis AI',
     description:
-      'Instead of bolting aluminum racks onto aging shingles, Teralio replaces or integrates flush charcoal solar tiles with color-matched inactive perimeter tiles—turning every sunlit plane into an architectural generator.',
+      'Sampaikan kebutuhan tempat tinggal Anda menggunakan bahasa sehari-hari. Asisten percakapan AI Teralio memahami kriteria budget, tipe kos putra/putri, fasilitas AC/water heater, dan lingkungan tenang secara akurat ke database 46 unit terkurasi.',
   },
   {
     step: '02',
-    title: 'High-Density LiFePO4 Energy Vault',
+    title: 'Budget Intelligence & Transparansi Biaya',
     description:
-      'Liquid-regulated lithium iron phosphate modules maintain optimal thermal performance from -25°C winter frost to +48°C summer heatwaves, delivering 10,000+ deep cycles without fire propagation risk.',
+      'Menghilangkan 74% biaya tersembunyi yang kerap dihadapi mahasiswa. Sistem mengkalkulasikan sewa pokok ditambah estimasi utilitas listrik, air, dan kebersihan menjadi total biaya bulanan yang rasional sebelum survei.',
   },
   {
     step: '03',
-    title: 'Teralio Smart Controller V4',
+    title: 'Location Intelligence & Google Maps API',
     description:
-      'Connected directly to regional day-ahead electricity exchanges and satellite irradiance models, the Smart Controller turns excess daytime harvest into monetary credits that neutralize dark winter weeks.',
+      'Penentuan koordinat presisi berbasis Google Maps Platform dan kalkulasi rute jalan kaki OpenStreetMap (OSRM) ke gerbang kampus Telkom University, ITB, UTB, UI, dan UGM, lengkap dengan analisis kawasan bebas banjir.',
   },
   {
     step: '04',
-    title: '84-Month Zero-Bill Settlement',
+    title: 'Mekanisme Direct-to-Owner & Visit Schedule',
     description:
-      'Teralio becomes your single automated energy steward. Every month for 7 years, your statement reads $0.00—and after year 7, you own an asset still operating above 92% rated capacity.',
+      'Hubungi pemilik kos asli secara langsung melalui WhatsApp atau telepon tanpa perantara/makelar. Jadwalkan survei kunjungan fisik dan simpan langsung ke kalender interaktif aplikasi.',
   },
 ];
 
 const HARDWARE_BLUEPRINT_SPECS = [
-  'Matte Charcoal Obsidian (Low-Glare AR Satin)',
-  'N-Type Back-Contact Monocrystalline Silicon',
-  'UL 2218 Class 4 (50mm steel sphere) • 210 km/h wind uplift',
-  'Dual ARM Cortex-A76 Edge NPU + Dual-SIM LTE/Wi-Fi 6',
-  'Automotive-grade Prismatic LiFePO4 (0% Cobalt)',
-  '7.4 milliseconds (flicker-free medical & server grade)',
-  '-30°C to +55°C with active self-warming winter loop',
-  '84 consecutive billing cycles at $0.00 net homeowner cost',
+  '46 Katalog Properti Terkurasi dengan Koordinat Riil di Bandung Raya, Depok & Yogyakarta',
+  'AI Percakapan Natural Language Teks & Suara Real-time (OpenAI WebRTC)',
+  'Pemetaan Geospasial Google Maps API + Engine Rute Jalan Kaki OSRM',
+  'Kalkulasi Total Biaya Tinggal: Sewa Pokok + Estimasi Utilitas Bulanan',
+  'Model Direct-to-Owner 100% Bebas Biaya Komisi Makelar / Perantara',
+  'Penyelarasan Kalender Survei Kunjungan Kos & Booking Interaktif',
+  'Basis Data PostgreSQL Supabase Diamankan Row Level Security (RLS)',
+  '104 Skenario Pengujian Otomatis Lulus 100% (Vitest & Supertest)',
 ];
 
 export function HomePage() {
@@ -122,14 +122,14 @@ export function HomePage() {
         <div className="section-shell">
           <div className="section-header-split">
             <div>
-              <span className="eyebrow-pill">Autonomous Power Architecture</span>
+              <span className="eyebrow-pill">Intelligent Living Ecosystem</span>
               <h2 className="section-title">
-                Three Integrated Layers. <i className="split-muted">Zero Grid Invoices.</i>
+                Tiga Lapisan Terintegrasi. <i className="split-muted">Tanpa Biaya Tersembunyi.</i>
               </h2>
             </div>
             <p className="section-lead max-w-lg">
-              Teralio transforms private residential properties into self-arbitraging micropower
-              plants using integrated solar tile architecture and predictive weather telemetry.
+              Teralio menggabungkan Accommodation Discovery, Budget Intelligence, dan Location Intelligence
+              ke dalam satu alur percakapan cerdas yang menghubungkan mahasiswa langsung dengan pemilik hunian.
             </p>
           </div>
 
@@ -151,9 +151,9 @@ export function HomePage() {
           <div className="hardware-blueprint-panel">
             <div className="blueprint-top-bar">
               <div>
-                <span className="eyebrow-pill">Hardware Blueprint</span>
+                <span className="eyebrow-pill">Spesifikasi Arsitektur Sistem</span>
                 <h3 className="blueprint-heading">
-                  Microgrid Technical Specifications
+                  Fondasi Teknis Platform Teralio
                 </h3>
               </div>
               <button
@@ -161,7 +161,7 @@ export function HomePage() {
                 className="ghost-pill-btn"
                 onClick={handlePrimaryAction}
               >
-                <span>Download Engineering Packet</span>
+                <span>Mulai Eksplorasi Hunian</span>
                 <ArrowUpRightIcon size={14} />
               </button>
             </div>

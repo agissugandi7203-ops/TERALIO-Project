@@ -40,7 +40,7 @@ export function PricingSection({ onAction }) {
               letterSpacing: '0.04em',
             }}
           >
-            Skema Berlangganan
+            Teralio Service Plans
           </span>
 
           {/* Heading */}
@@ -50,7 +50,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#ffffff' : '#111827',
             }}
           >
-            Skema fleksibel untuk setiap kebutuhan pengawasan
+            Transparent for Students, Efficient for Property Owners
           </h2>
 
           <p
@@ -59,7 +59,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#94a3b8' : '#64748b',
             }}
           >
-            Pilih paket yang sesuai untuk skala audit faskes, otomasi verifikasi, atau efisiensi pemantauan klaim Anda.
+            100% free accommodation discovery for students. Direct-to-owner listings with zero middleman commissions for landlords.
           </p>
 
           {/* Billing Toggle: Monthly vs Yearly */}
@@ -114,7 +114,7 @@ export function PricingSection({ onAction }) {
             >
               <span>Yearly</span>
               <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-500 text-white tracking-wide">
-                20% off
+                Save 20%
               </span>
             </button>
           </div>
@@ -122,7 +122,7 @@ export function PricingSection({ onAction }) {
 
         {/* 2 Main Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch mb-8">
-          {/* 1. Starter Plan */}
+          {/* 1. Mahasiswa Plan */}
           <div
             className="rounded-3xl p-7 sm:p-9 flex flex-col justify-between transition-all duration-300 hover:shadow-xl relative"
             style={{
@@ -139,14 +139,14 @@ export function PricingSection({ onAction }) {
                   className="text-xl sm:text-2xl font-bold"
                   style={{ color: isNight ? '#ffffff' : '#111827' }}
                 >
-                  Starter plan
+                  Students &amp; Seekers
                 </h3>
               </div>
               <p
                 className="text-sm mb-6"
                 style={{ color: isNight ? '#94a3b8' : '#64748b' }}
               >
-                Best for individual investors & single-unit verifiers
+                Free forever for university students and local room seekers
               </p>
 
               {/* Price */}
@@ -155,19 +155,14 @@ export function PricingSection({ onAction }) {
                   className="text-4xl sm:text-5xl font-extrabold tracking-tight transition-all duration-300"
                   style={{ color: isNight ? '#ffffff' : '#111827' }}
                 >
-                  ${isYearly ? '16' : '19'}
+                  Rp0
                 </span>
                 <span
                   className="text-sm font-medium"
                   style={{ color: isNight ? '#94a3b8' : '#64748b' }}
                 >
-                  /month
+                  /forever
                 </span>
-                {isYearly && (
-                  <span className="ml-2 text-xs font-medium text-emerald-500">
-                    (ditagih tahunan)
-                  </span>
-                )}
               </div>
 
               {/* CTA Button */}
@@ -180,18 +175,18 @@ export function PricingSection({ onAction }) {
                   color: '#ffffff',
                 }}
               >
-                Get started
+                Start Searching for Free
               </button>
 
               {/* Feature Checklist */}
               <div className="space-y-3.5">
                 {[
-                  'Connect up to 5 investment accounts',
-                  'Portfolio performance tracking',
-                  'Basic AI insights',
-                  'Market updates & alerts',
-                  'Real-time price alerts',
-                  'Email support',
+                  'Conversational AI assistant in natural language (text & voice)',
+                  'Curated catalog of 46 verified accommodations in Bandung, Depok & Yogya',
+                  'Total living cost estimates (base rent + monthly utilities)',
+                  'Google Maps & OSRM walking routes to university campus gates',
+                  'Direct WhatsApp contact with property owners (zero middleman)',
+                  'Schedule physical survey visits directly to your calendar',
                 ].map((feat, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <div
@@ -215,7 +210,7 @@ export function PricingSection({ onAction }) {
             </div>
           </div>
 
-          {/* 2. Pro Plan (Featured Card) */}
+          {/* 2. Pemilik Kos Plan (Featured Card) */}
           <div
             className="rounded-3xl p-7 sm:p-9 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl relative overflow-hidden"
             style={{
@@ -234,40 +229,40 @@ export function PricingSection({ onAction }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  Pro plan
+                  Property Owners (Direct-to-Owner)
                 </h3>
                 <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-sm">
                   <Sparkles className="w-3 h-3" />
-                  Popular
+                  Verified Partner
                 </span>
               </div>
 
               <p className="text-sm mb-6 text-slate-300">
-                Best for active investors & auditing teams
+                Direct marketing to students with zero broker cuts or commissions
               </p>
 
               {/* Price */}
               <div className="flex items-baseline gap-1.5 mb-3">
                 <span className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white transition-all duration-300">
-                  ${isYearly ? '32' : '39'}
+                  {isYearly ? 'Rp39K' : 'Rp49K'}
                 </span>
                 <span className="text-sm font-medium text-slate-400">
-                  /month
+                  /property/mo
                 </span>
                 {isYearly && (
                   <span className="ml-2 text-xs font-semibold text-emerald-400">
-                    (ditagih tahunan)
+                    (billed yearly)
                   </span>
                 )}
               </div>
 
               {/* Guarantee badges */}
               <div className="flex items-center flex-wrap gap-2 text-[11px] font-medium text-slate-400 mb-8">
-                <span>7-day free trial available</span>
+                <span>0% Broker Commission</span>
                 <span>•</span>
-                <span>No credit card required</span>
+                <span>Direct WhatsApp Contact</span>
                 <span>•</span>
-                <span>Cancel anytime</span>
+                <span>Google Maps Pin Placement</span>
               </div>
 
               {/* CTA Button */}
@@ -276,18 +271,18 @@ export function PricingSection({ onAction }) {
                 onClick={handleAction}
                 className="w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all duration-200 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] cursor-pointer mb-8 bg-white text-slate-900 shadow-lg"
               >
-                Get started
+                List Your Property
               </button>
 
               {/* Feature Checklist */}
               <div className="space-y-3.5">
                 {[
-                  'Unlimited account connections',
-                  'Advanced AI investment insights',
-                  'Portfolio risk analysis',
-                  'Smart alerts & automation',
-                  'Historical performance analytics',
-                  'Priority support',
+                  'Verified property listing with genuine GPS coordinates',
+                  '100% free of middleman commissions per lease agreement',
+                  'Direct WhatsApp integration connected to student seekers',
+                  'Visit schedule reservation calendar management',
+                  'Priority recommendations in AI assistant conversations',
+                  'Verified property badge & tenant interest analytics',
                 ].map((feat, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-500/20 text-cyan-400">
@@ -316,13 +311,13 @@ export function PricingSection({ onAction }) {
               className="text-lg sm:text-xl font-bold mb-1.5"
               style={{ color: isNight ? '#ffffff' : '#111827' }}
             >
-              Enterprise plan
+              Campus &amp; Housing Management Partnerships
             </h4>
             <p
               className="text-sm font-normal"
               style={{ color: isNight ? '#94a3b8' : '#64748b' }}
             >
-              Need a custom solution for your organization? Talk with our team to design a plan for your needs.
+              Official living curation programs for universities to streamline onboarding for new and exchange students.
             </p>
           </div>
 
@@ -336,7 +331,7 @@ export function PricingSection({ onAction }) {
               color: isNight ? '#ffffff' : '#0f172a',
             }}
           >
-            Contact sales
+            Contact Teralio Team
           </button>
         </div>
       </div>

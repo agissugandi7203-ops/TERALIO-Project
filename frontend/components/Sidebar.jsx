@@ -88,8 +88,8 @@ const NavIcons = {
 };
 
 const PRIMARY_ITEMS = [
-  { id: 'home', label: 'Home Overview' },
-  { id: 'discovery', label: 'Smart Kos Match', badge: 'Maps' },
+  { id: 'home', label: 'Dashboard' },
+  { id: 'discovery', label: 'Smart Kos' },
   { id: 'chat', label: 'Chat' },
   { id: 'schedule', label: 'Visit Schedule' },
 ];
@@ -197,9 +197,12 @@ export const Sidebar = ({
                 </button>
               );
             })}
+          </nav>
+        </div>
 
-            <div className="sidebar-divider" role="separator" />
-
+        {/* Bottom Group: Notifications, Preferences, Minimize/Extend Dock, User Profile */}
+        <div className="sidebar-bottom">
+          <div className="sidebar-bottom-actions" aria-label="Utilities">
             {SECONDARY_ITEMS.map((item) => {
               const active = activeNav === item.id;
               return (
@@ -225,37 +228,23 @@ export const Sidebar = ({
                 </button>
               );
             })}
-          </nav>
-        </div>
 
-        {/* Bottom Group: Minimize/Extend Dock Button, System Info, User Profile */}
-        <div className="sidebar-bottom">
-          <button
-            type="button"
-            className="sidebar-nav-btn"
-            onClick={onToggleExpand}
-            data-tooltip={isExpanded ? 'Minimize Sidebar' : 'Extend Sidebar'}
-            data-testid="sidebar-dock-toggle-btn"
-            aria-label={isExpanded ? 'Minimize Sidebar' : 'Extend Sidebar'}
-          >
-            <span className="sidebar-nav-btn__icon">
-              {NavIcons.dockToggle(isExpanded)}
-            </span>
-            <span className="sidebar-nav-btn__label">
-              {isExpanded ? 'Minimize Menu' : 'Extend Menu'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`sidebar-nav-btn ${activeNav === 'system' ? 'is-active' : ''}`}
-            onClick={() => handleSelect('system')}
-            data-tooltip="Platform & API Status"
-            data-testid="nav-item-system"
-          >
-            <span className="sidebar-nav-btn__icon">{NavIcons.info()}</span>
-            <span className="sidebar-nav-btn__label">System Status</span>
-          </button>
+            <button
+              type="button"
+              className="sidebar-nav-btn"
+              onClick={onToggleExpand}
+              data-tooltip={isExpanded ? 'Minimize Menu' : 'Extend Menu'}
+              data-testid="sidebar-dock-toggle-btn"
+              aria-label={isExpanded ? 'Minimize Menu' : 'Extend Menu'}
+            >
+              <span className="sidebar-nav-btn__icon">
+                {NavIcons.dockToggle(isExpanded)}
+              </span>
+              <span className="sidebar-nav-btn__label">
+                {isExpanded ? 'Minimize Menu' : 'Extend Menu'}
+              </span>
+            </button>
+          </div>
 
           <div
             className="sidebar-profile"

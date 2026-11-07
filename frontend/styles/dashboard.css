@@ -335,9 +335,22 @@ body.teralio-dashboard-body {
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
+  width: 100%;
+}
+
+.sidebar-bottom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  align-items: center;
 }
 
 .dash-sidebar.is-expanded .sidebar-bottom {
+  align-items: stretch;
+}
+
+.dash-sidebar.is-expanded .sidebar-bottom-actions {
   align-items: stretch;
 }
 

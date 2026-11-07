@@ -58,18 +58,18 @@ export function HeroFogScene() {
 
       <div className="ui">
         <h1>
-          <span className="l1">$0 Electricity Bills</span>
+          <span className="l1">Cari Kos Cerdas</span>
           <span>
-            <i>for the next</i> <span className="y">7 Years</span>
+            <i>berbasis</i> <span className="y">AI Living Hub</span>
           </span>
         </h1>
 
         <div className="dock">
           <TimeToggle />
           <p className="cap">
-            Forget the energy market, weather conditions and seasons. Our Smart
+            Eksplorasi hunian mahasiswa transparan tanpa perantara. Dilengkapi
             <br />
-            Controller guarantees you get no electricity bill for seven years.
+            analisis total biaya tinggal dan rute jalan kaki Google Maps ke kampus Anda.
           </p>
         </div>
       </div>

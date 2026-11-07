@@ -190,10 +190,10 @@ describe('TERALIO Dashboard Page & Collapsible Sidebar', () => {
   it('berpindah ke subview Smart Kos Match berbasis Google Maps interaktif dan kembali ke overview', async () => {
     render(<DashboardPage />);
 
-    // Klik menu Smart Kos Match (discovery)
+    // Klik menu Smart Kos (discovery)
     fireEvent.click(screen.getByTestId('nav-item-discovery'));
     expect(screen.getByTestId('subview-discovery')).toBeInTheDocument();
-    expect(screen.getByText('Smart Kos Match & Listings')).toBeInTheDocument();
+    expect(screen.getByText('Smart Kos & Listings')).toBeInTheDocument();
 
     // Verifikasi tampilan utama adalah Peta Interaktif In-Platform (tanpa iframe eksternal "Open with Maps")
     expect(screen.getByTestId('smart-kos-google-map')).toBeInTheDocument();

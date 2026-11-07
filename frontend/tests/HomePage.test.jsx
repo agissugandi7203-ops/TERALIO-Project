@@ -12,8 +12,8 @@ describe('Teralio Single-Page Landing Page & Unified Header', () => {
     expect(headers).toHaveLength(1);
     const headerNode = headers[0];
 
-    // Hero headline Lumen Roof
-    expect(screen.getByText('$0 Electricity Bills')).toBeInTheDocument();
+    // Hero headline Teralio
+    expect(screen.getByText('Cari Kos Cerdas')).toBeInTheDocument();
     expect(within(headerNode).getByTestId('header-get-started-btn')).toBeInTheDocument();
     expect(within(headerNode).getByTestId('header-theme-toggle')).toBeInTheDocument();
 
@@ -66,12 +66,12 @@ describe('Teralio Single-Page Landing Page & Unified Header', () => {
     expect(faqSection).toBeInTheDocument();
 
     // Pastikan pertanyaan pertama terbuka secara default
-    const firstQuestion = screen.getByText('What is the maximum amount I can send?');
+    const firstQuestion = screen.getByText('Bagaimana cara Teralio membantu mahasiswa mencari kos?');
     const firstButton = firstQuestion.closest('[role="button"]');
     expect(firstButton).toHaveAttribute('aria-expanded', 'true');
 
     // Klik pertanyaan kedua untuk membuka
-    const secondQuestion = screen.getByText('Does my recipient need an account?');
+    const secondQuestion = screen.getByText('Apa itu Budget Intelligence dan bagaimana cara perhitungannya?');
     const secondButton = secondQuestion.closest('[role="button"]');
     expect(secondButton).toHaveAttribute('aria-expanded', 'false');
 

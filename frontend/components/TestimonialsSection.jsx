@@ -5,48 +5,48 @@ import { useAtmosphere } from '../context/AtmosphereContext.jsx';
 export const HEALTHKATHON_TESTIMONIALS = [
   {
     id: 1,
-    name: 'dr. Hendra Wijaya, M.Kes',
-    jobTitle: 'Ketua Tim PK-JKN',
+    name: 'Ahmad Fauzi',
+    jobTitle: 'Mahasiswa Informatika Telkom University',
     content:
-      'Sekarang saya bisa melihat seluruh pola klaim lintas-faskes di satu tempat. Indikator Haversine & Doctor Shopping membuat keputusan audit jauh lebih cepat.',
+      'Dulu saya dan teman-teman butuh 7 hari keliling gang Sukapura dan Sukabirus buat cari kos. Di Teralio, asisten AI langsung kasih opsi kos yang bebas banjir lengkap rute jalan kaki 650 meter ke kampus.',
     avatar: 'https://framerusercontent.com/images/gDcaZH5xt6hqSU2VbK2snAw.jpg?width=150&height=150',
-    initials: 'HW',
+    initials: 'AF',
   },
   {
     id: 2,
-    name: 'Rina Kusumawardhani, Apt.',
-    jobTitle: 'Verifikator Klaim PRB',
+    name: 'Nabila Putri',
+    jobTitle: 'Mahasiswi SITH ITB Bandung',
     content:
-      'Pemantauan real-time INFERA menghemat berjam-jam waktu rekonsiliasi setiap minggu. Saya selalu tahu klaim obat kronis mana yang butuh klarifikasi.',
+      'Sangat terbantu dengan fitur Budget Intelligence-nya. Gak ada lagi drama biaya token listrik atau air tersembunyi, semua rincian sewa pokok dan utilitas dihitung transparan dari awal.',
     avatar: 'https://framerusercontent.com/images/X0ECJ5xGgYrCVgHB8RYd3RABTQ.jpg?width=150&height=150',
-    initials: 'RK',
+    initials: 'NP',
   },
   {
     id: 3,
-    name: 'Ir. Bagus Pratama, CISA',
-    jobTitle: 'Arsitek Kepatuhan Data',
+    name: 'H. Dedi Suhendar',
+    jobTitle: 'Pemilik Kos Pondok Barokah (Kawasan PGA Telkom)',
     content:
-      'Wawasan yang disajikan terasa praktis dan mudah ditindaklanjuti. Tidak membingungkan dengan angka mentah, melainkan menjelaskan pasal regulasinya.',
+      'Sebagai pemilik kos, saya senang bisa langsung berkomunikasi dengan calon penyewa tanpa dipotong komisi makelar. Jadwal survei kunjungan mahasiswa juga rapi masuk ke kalender.',
     avatar: 'https://framerusercontent.com/images/622M5cyJBdKPIK1fPnBlo3qONk.jpg?width=150&height=150',
-    initials: 'BP',
+    initials: 'DS',
   },
   {
     id: 4,
-    name: 'dr. Siti Nurhaliza, Sp.PD',
-    jobTitle: 'Auditor Medis FKRTL',
+    name: 'Dimas Pratama',
+    jobTitle: 'Mahasiswa Baru UTB Bandung',
     content:
-      'Mengelola verifikasi ribuan SEP dulu terasa sangat melelahkan. Sekarang saya memiliki visibilitas penuh dan kepercayaan diri dalam setiap keputusan.',
+      'Fitur suaranya keren banget! Tinggal ngomong cari kos dekat kampus UTB Soekarno-Hatta yang ada kamar mandi dalam, kamera peta langsung mengarahkan ke lokasinya.',
     avatar: 'https://framerusercontent.com/images/7Z2d6WeDiCpoz0B6ookMTPOFAU.jpg?width=800&height=920',
-    initials: 'SN',
+    initials: 'DP',
   },
   {
     id: 5,
-    name: 'Andi Firmansyah, S.KM',
-    jobTitle: 'Analis Aktuaria JKN',
+    name: 'Sarah Maulida',
+    jobTitle: 'Mahasiswi Rantau UI Depok',
     content:
-      'Antarmukanya bersih dan bebas distraksi. Saya dapat meninjau performa klaim, skor risiko peserta, dan tren penghematan DJS hanya dalam hitungan menit.',
+      'Pencarian hunian yang benar-benar paham kebutuhan anak rantau. Perhitungan estimasi biaya hidup dan jarak jalan kaki ke stasiun serta gerbang kampus sangat presisi.',
     avatar: 'https://framerusercontent.com/images/QJxW9eYj0OFH6UvNuY4WNkVNJ0.jpg?width=800&height=900',
-    initials: 'AF',
+    initials: 'SM',
   },
 ];
 
@@ -136,7 +136,7 @@ export function TestimonialsSection({ onAction }) {
                 color: isNight ? '#ffffff' : '#111827',
               }}
             >
-              Dipercaya oleh auditor & verifikator modern
+              Dipercaya oleh Ribuan Mahasiswa &amp; Pemilik Kos
             </h2>
 
             {/* 3 ListItem Feature Pills with Vertical Dividers */}
@@ -158,7 +158,7 @@ export function TestimonialsSection({ onAction }) {
 
               <div className="flex items-center gap-1.5">
                 <MessageSquareCheck className="w-4 h-4 text-emerald-500" />
-                <span>Ulasan Pengguna Terverifikasi</span>
+                <span>Ulasan Penghuni Terverifikasi</span>
               </div>
 
               <div
@@ -168,7 +168,7 @@ export function TestimonialsSection({ onAction }) {
 
               <div className="flex items-center gap-1.5">
                 <ThumbsUp className="w-4 h-4 text-sky-500" />
-                <span>98% Kepuasan Verifikator</span>
+                <span>98% Kepuasan Mahasiswa</span>
               </div>
             </div>
           </div>

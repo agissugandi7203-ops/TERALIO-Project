@@ -33,7 +33,7 @@ const NAV_COLUMNS = [
     links: [
       { label: 'How it works', href: '/how-it-works', internal: true },
       { label: 'Features', href: '/cases', internal: true },
-      { label: 'Pricing', href: '/quote', internal: true },
+      { label: 'Pricing', href: '/pricing', internal: true },
       { label: 'Testimonials', href: '/customers', internal: true },
       { label: 'FAQ', href: '/resources', internal: true },
     ],
@@ -41,7 +41,6 @@ const NAV_COLUMNS = [
   {
     title: 'Company',
     links: [
-      { label: 'Blog', href: '/resources', internal: true },
       { label: 'About', href: '/about', internal: true },
       { label: 'Terms and Condition', href: '#terms', internal: false },
       { label: 'Privacy Policy', href: '#privacy', internal: false },

@@ -4,24 +4,24 @@ import { useAtmosphere } from '../context/AtmosphereContext.jsx';
 
 export const FAQ_ITEMS = [
   {
-    q: 'What is the maximum amount I can send?',
-    a: 'Transfer limits vary by payment method and destination country. You can check specific limits in your account dashboard.',
+    q: 'Bagaimana cara Teralio membantu mahasiswa mencari kos?',
+    a: 'Teralio menggabungkan Accommodation Discovery, Budget Intelligence, dan Location Intelligence. Anda cukup menyampaikan kriteria hunian kepada asisten AI dengan bahasa sehari-hari. Sistem akan menyaring katalog kos terverifikasi, menghitung total biaya tinggal (sewa + utilitas), dan memvisualisasikan rute jalan kaki ke kampus di peta interaktif.',
   },
   {
-    q: 'Does my recipient need an account?',
-    a: "No, your recipient doesn't need an account. Funds can be sent directly to their bank account or mobile wallet.",
+    q: 'Apa itu Budget Intelligence dan bagaimana cara perhitungannya?',
+    a: 'Berdasarkan survei tim, 74% mahasiswa menemukan biaya tambahan tak terduga di luar sewa. Fitur Budget Intelligence menghitung transparansi finansial: sewa pokok ditambah estimasi utilitas bulanan (token listrik laptop/kipas/AC, air, dan kebersihan) sehingga calon penyewa mengetahui estimasi total pengeluaran riil per bulan sejak awal.',
   },
   {
-    q: 'Is there a mobile app available?',
-    a: 'Yes, our mobile app is available for both iOS and Android. You can download it from the App Store or Google Play Store.',
+    q: 'Apakah ada potongan komisi atau biaya makelar/perantara di Teralio?',
+    a: 'Sama sekali tidak ada. Teralio menerapkan prinsip 100% direct-to-owner. Calon penyewa dapat langsung menghubungi pemilik properti asli via WhatsApp atau telepon tanpa potongan komisi sepeser pun.',
   },
   {
-    q: 'Can I cancel a transfer?',
-    a: "You can cancel a transfer if it hasn't been processed yet. Go to your transaction history and select the cancel option.",
+    q: 'Kampus mana saja yang didukung oleh Teralio saat ini?',
+    a: 'Pada tahap prototipe, Teralio berfokus pada area Kota Bandung (kawasan Telkom University, Institut Teknologi Bandung / ITB, dan Universitas Teknologi Bandung / UTB) serta data pembanding di Universitas Indonesia (UI Depok) dan Universitas Gadjah Mada (UGM Yogyakarta) dengan 46 unit hunian terkurasi.',
   },
   {
-    q: 'What currencies are supported?',
-    a: 'We support over 50 currencies for transfers to more than 130 countries worldwide.',
+    q: 'Bagaimana cara mengatur jadwal survei kunjungan fisik kos?',
+    a: 'Anda dapat meminta asisten AI secara percakapan ("Jadwalkan survei ke Kos Pondok Putri Al-Barokah besok jam 10 pagi") atau mengklik tombol survei pada kartu hunian. Jadwal akan tersinkronisasi otomatis ke kalender Visit Schedule dan Anda dapat mengonfirmasinya langsung ke pemilik.',
   },
 ];
 
@@ -81,13 +81,13 @@ export function FaqTransferSection({ onAction }) {
                     letterSpacing: '-0.03em',
                   }}
                 >
-                  Ready to Transfer
+                  Siap Temukan
                   <br />
-                  Without Borders?
+                  Hunian Ideal Anda?
                 </h2>
 
                 <p className="text-[0.92rem] md:text-[0.98rem] mb-[30px] font-normal opacity-90 max-w-md leading-relaxed">
-                  Send Money Worldwide at the Best Rates
+                  Pencarian cerdas berbasis AI dengan transparansi biaya dan rute kampus
                 </p>
 
                 <button
@@ -104,7 +104,7 @@ export function FaqTransferSection({ onAction }) {
                   onMouseEnter={() => setBtnHovered(true)}
                   onMouseLeave={() => setBtnHovered(false)}
                 >
-                  <span>Get Started Today</span>
+                  <span>Mulai Sekarang</span>
                   <ArrowRight size={16} />
                 </button>
               </div>

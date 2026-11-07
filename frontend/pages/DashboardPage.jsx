@@ -22,12 +22,11 @@ import '../styles/smart-kos.css';
 const DEFAULT_RECOMMENDED_KOS = CURATED_ACCOMMODATIONS;
 
 const PAGE_LABELS = {
-  home: 'Home Overview',
-  discovery: 'Smart Kos Match',
+  home: 'Dashboard',
+  discovery: 'Smart Kos',
   schedule: 'Visit Schedule',
   notifications: 'Notifications',
   settings: 'Preferences',
-  system: 'System Status',
 };
 
 // Prompt yang berkaitan dengan janji temu / kalender diarahkan ke OpenAI Responses + MCP schedule tools

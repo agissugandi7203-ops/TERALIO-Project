@@ -1,41 +1,41 @@
 import React from 'react';
 import '../styles/caseResults.css';
 
-const HEADLINE_WORDS = ['How', 'businesses', 'achieved', 'measurable', 'results', 'with', 'Elo', 'One'];
+const HEADLINE_WORDS = ['Studi', 'Kasus', 'Pencarian', 'Hunian', 'Mahasiswa', 'di', 'Teralio'];
 
 const CASE_CARDS = [
   {
-    id: 'hotel-mira',
-    name: 'Hotel Mira',
-    outcome: 'Regional visibility boosted',
-    monogram: 'mountain',
-    stat1: { value: '+240%', label: 'more website visitors' },
-    stat2: { value: '+180%', label: 'more direct inquiries' },
+    id: 'telkom-sukapura',
+    name: 'Mahasiswa Telkom University',
+    outcome: 'Survei 9 Hari Jadi 15 Menit',
+    monogram: 'house',
+    stat1: { value: '-85%', label: 'waktu survei berkurang' },
+    stat2: { value: '100%', label: 'bebas biaya tersembunyi' },
     bg: 'radial-gradient(circle at 35% 25%, rgb(176, 64, 18) 0%, rgb(46, 13, 4) 100%)',
     image: 'https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/c42a7f3d-d802-4377-8cc6-9c209cdfad5f.webp',
-    alt: 'Hotel Mira alpine chalet hotel at sunset with glowing windows',
+    alt: 'Mahasiswa Telkom University menemukan kos dekat gerbang Sukapura',
   },
   {
-    id: 'nordhaus-estates',
-    name: 'Nordhaus Estates',
-    outcome: 'Leads multiplied',
-    monogram: 'house',
-    stat1: { value: '+663%', label: 'more online leads' },
-    stat2: { value: '+32%', label: 'more organic traffic' },
+    id: 'itb-dago',
+    name: 'Mahasiswa ITB Ganesha',
+    outcome: 'Budget Bulanan Terkendali',
+    monogram: 'mountain',
+    stat1: { value: 'Rp350 Rb', label: 'rata-rata hemat bulanan' },
+    stat2: { value: '780m', label: 'jarak jalan kaki riil' },
     bg: 'linear-gradient(145deg, rgb(236, 96, 28) 0%, rgb(250, 150, 56) 100%)',
     image: 'https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/d469e4d7-94ba-4457-ad51-b589766069f0.webp',
-    alt: 'Nordhaus Estates real-estate showroom with architectural model',
+    alt: 'Mahasiswa ITB menemukan hunian nyaman di Cisitu Dago',
   },
   {
-    id: 'studio-belle-peau',
-    name: 'Studio Belle Peau',
-    outcome: 'From invisible to fully booked',
+    id: 'juragan-sukabirus',
+    name: 'Pemilik Kos Sukabirus & PGA',
+    outcome: 'Penyewa Tepat Tanpa Makelar',
     monogram: 'lotus',
-    stat1: { value: '+362%', label: 'more qualified leads' },
-    stat2: { value: '+75%', label: 'more online bookings' },
+    stat1: { value: '0%', label: 'potongan komisi perantara' },
+    stat2: { value: '3x', label: 'kunjungan survei lebih cepat' },
     bg: 'radial-gradient(circle at 35% 25%, rgb(132, 52, 22) 0%, rgb(24, 9, 5) 100%)',
     image: 'https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/e791074d-795e-4b42-ad94-a6b113ecb72d.webp',
-    alt: 'Studio Belle Peau candle-lit spa treatment room',
+    alt: 'Pemilik kos di kawasan Telkom University terhubung langsung dengan mahasiswa',
   },
 ];
 
@@ -99,7 +99,7 @@ export function CaseResultsSection() {
     <div className="elo-results-section">
       {/* Centered High-End Header */}
       <header className="elo-header-wrap">
-        <h2 className="elo-headline" aria-label="How businesses achieved measurable results with Elo One">
+        <h2 className="elo-headline" aria-label="Studi Kasus Pencarian Hunian Mahasiswa di Teralio">
           {HEADLINE_WORDS.map((word, idx) => (
             <span
               key={`${word}-${idx}`}
@@ -112,8 +112,9 @@ export function CaseResultsSection() {
         </h2>
 
         <p className="elo-lead">
-          Our clients come from very different industries, but the goal is always the same: measurable
-          results. The projects below show the results that are actually possible.
+          Dari 50 mahasiswa yang disurvei di sekitar kampus Telkom University dan ITB,
+          74% menemukan biaya tambahan tak terduga saat mencari kos manual.
+          Teralio membuktikan pencarian cerdas dengan kepastian biaya sewa dan rute riil ke kampus.
         </p>
       </header>
 
@@ -182,7 +183,7 @@ export function CaseResultsSection() {
             }
           }}
         >
-          View more projects
+          Lihat Katalog Kos Terdekat
         </a>
       </div>
     </div>

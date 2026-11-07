@@ -679,9 +679,9 @@ export const SmartKosMapView = ({
         isSidebarExpanded ? 'sidebar-is-expanded' : 'sidebar-is-minimized'
       } ${isAiSidebarOpen ? 'ai-sidebar-is-open' : ''}`}
       data-testid="subview-discovery"
-      aria-label="Smart Kos Match Interactive Platform Map"
+      aria-label="Smart Kos Interactive Platform Map"
     >
-      <h2 className="sr-only">Smart Kos Match &amp; Listings</h2>
+      <h2 className="sr-only">Smart Kos &amp; Listings</h2>
 
       <div className="fullpage-gmaps-canvas-wrap" data-testid="smart-kos-google-map">
         <InPlatformMapCanvas
