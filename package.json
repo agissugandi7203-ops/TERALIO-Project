@@ -2,6 +2,7 @@
   "name": "teralio",
   "version": "1.0.0",
   "description": "Teralio - Fullstack Platform with Vite Frontend, Express Backend, Supabase & OpenAI",
+  "type": "module",
   "private": true,
   "workspaces": [
     "frontend",

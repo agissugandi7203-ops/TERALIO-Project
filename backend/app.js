@@ -9,8 +9,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
+// API Routes (Mendukung akses /api/* secara lokal maupun saat di-rewrite oleh Vercel)
 app.use('/api', routes);
+app.use('/', routes);
 
 // 404 Route Handler
 app.use((req, res) => {
