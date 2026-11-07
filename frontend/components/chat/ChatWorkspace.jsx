@@ -66,6 +66,25 @@ export function ChatWorkspace({
     }
   }, [openVoiceSignal]);
 
+  // Pastikan textarea input langsung terfokus saat masuk ke halaman Chat
+  useEffect(() => {
+    const focusComposer = () => {
+      const inputEl = document.querySelector('[data-testid="chat-composer-input"]');
+      if (inputEl) {
+        inputEl.focus();
+        try {
+          const len = inputEl.value.length;
+          inputEl.setSelectionRange?.(len, len);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    focusComposer();
+    const t = setTimeout(focusComposer, 60);
+    return () => clearTimeout(t);
+  }, []);
+
   // Isi composer jika ada prompt awal dari kartu lain (mis. Smart Kos Match)
   useEffect(() => {
     if (pendingPrompt && pendingPrompt.trim()) {
@@ -574,6 +593,7 @@ export function ChatWorkspace({
                 onSelectFiles={handleSelectFiles}
                 onRemoveAttachment={handleRemoveAttachment}
                 isStreaming={isStreaming}
+                autoFocus={true}
               />
             </div>
           </div>
@@ -601,6 +621,7 @@ export function ChatWorkspace({
                 onSelectFiles={handleSelectFiles}
                 onRemoveAttachment={handleRemoveAttachment}
                 isStreaming={isStreaming}
+                autoFocus={true}
               />
             </div>
           </div>

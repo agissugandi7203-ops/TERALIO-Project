@@ -54,12 +54,38 @@ export function ChatComposer({
   onRemoveAttachment,
   isStreaming = false,
   placeholder = 'Tanya Teralio...',
+  autoFocus = true,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const textareaRef = useRef(null);
   const menuWrapRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+
+  // Auto focus input ketika halaman chat dimuat agar user bisa langsung mengetik tanpa klik kolom
+  useEffect(() => {
+    if (!autoFocus) return;
+
+    const performFocus = () => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      try {
+        const len = el.value.length;
+        el.setSelectionRange?.(len, len);
+      } catch {
+        // ignore selection errors
+      }
+    };
+
+    performFocus();
+    const t1 = setTimeout(performFocus, 40);
+    const t2 = setTimeout(performFocus, 140);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [autoFocus]);
 
   const adjustTextareaHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -122,6 +148,9 @@ export function ChatComposer({
     if (e) e.preventDefault();
     if (!canSubmit) return;
     onSubmit?.();
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 20);
   };
 
   const handleKeyDown = (e) => {
@@ -129,6 +158,9 @@ export function ChatComposer({
       e.preventDefault();
       if (canSubmit) {
         onSubmit?.();
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 20);
       }
     }
   };
@@ -154,6 +186,11 @@ export function ChatComposer({
     <form
       className={`teralio-composer ${attachments.length > 0 ? 'has-attachments' : ''}`}
       onSubmit={handleFormSubmit}
+      onClick={(e) => {
+        if (!e.target.closest('button') && !e.target.closest('.composer-attach-menu')) {
+          textareaRef.current?.focus();
+        }
+      }}
       data-testid="chat-composer"
     >
       {/* Hidden native inputs for Upload File & Upload Image */}
@@ -293,7 +330,7 @@ export function ChatComposer({
         </div>
 
         {/* Center: Auto-growing Multiline Textarea */}
-        <div className="composer-center">
+        <div className="composer-center" onClick={() => textareaRef.current?.focus()}>
           <textarea
             ref={textareaRef}
             rows={1}
@@ -304,6 +341,7 @@ export function ChatComposer({
             aria-label="Tulis pesan untuk Teralio"
             className="composer-textarea"
             data-testid="chat-composer-input"
+            autoFocus={autoFocus}
           />
         </div>
 
