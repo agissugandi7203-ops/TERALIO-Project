@@ -810,7 +810,8 @@ export const SmartKosMapView = ({
             kos={selectedKos}
             campus={selectedCampus}
             route={activeRoute}
-            userName={user?.fullName || 'Mahasiswa TERALIO'}
+            userName={user?.fullName || 'Mahasiswa Teralio'}
+            userId={user?.id || null}
             showRouteLine={showRouteLine}
             onToggleRouteLine={() => setShowRouteLine((prev) => !prev)}
             onFocusOnMap={(kos) => handleSelectKos(kos)}

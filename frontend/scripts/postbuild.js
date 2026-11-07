@@ -21,6 +21,8 @@ const spaRoutes = [
   'login/index.html',
   'signup/index.html',
   'dashboard/index.html',
+  'schedule/index.html',
+  'visit-schedule/index.html',
 ];
 
 for (const route of spaRoutes) {

@@ -849,7 +849,13 @@ export class RealtimeVoiceClient {
       try {
         this.audioEl.pause?.();
         this.audioEl.srcObject = null;
-        this.audioEl.load?.();
+        if (
+          typeof this.audioEl.load === 'function' &&
+          typeof window !== 'undefined' &&
+          !window.navigator?.userAgent?.includes('jsdom')
+        ) {
+          this.audioEl.load();
+        }
       } catch {
         // ignore
       }

@@ -88,11 +88,13 @@ const INITIAL_NOTIFICATIONS = [
   },
 ];
 
-export function NotificationsView({ onNavigate, onFocusKosOnMap }) {
+export function NotificationsView({ user = null, onNavigate, onFocusKosOnMap }) {
+  const storageKey = `teralio_user_notifications_${user?.id || 'guest'}`;
+
   const [notifications, setNotifications] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(storageKey);
         if (saved) return JSON.parse(saved);
       } catch (err) {
         console.warn('[NotificationsView] Failed to load notifications:', err);
@@ -107,12 +109,27 @@ export function NotificationsView({ onNavigate, onFocusKosOnMap }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          setNotifications(JSON.parse(saved));
+        } else {
+          setNotifications(INITIAL_NOTIFICATIONS);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(notifications));
       } catch (err) {
         console.warn('[NotificationsView] Failed to save notifications:', err);
       }
     }
-  }, [notifications]);
+  }, [notifications, storageKey]);
 
   useEffect(() => {
     if (toastMessage) {

@@ -9,11 +9,16 @@ const MEMBER_AVATARS = [
 export const HeroBannerCard = ({ onExploreVoice, onStartSession }) => {
   return (
     <section className="hero-bento-card" data-testid="hero-bento-card">
-      <img
-        src="/dashboard-hero.jpg"
-        alt="Student discovering ideal kos room with TERALIO Voice AI"
-        className="hero-bento-card__bg-img"
-      />
+      <picture>
+        <source srcSet="/dashboard-hero.webp" type="image/webp" />
+        <img
+          src="/dashboard-hero.jpg"
+          alt="Student discovering ideal kos room with Teralio Voice AI"
+          className="hero-bento-card__bg-img"
+          loading="eager"
+          decoding="async"
+        />
+      </picture>
       <div className="hero-bento-card__gradient-scrim" aria-hidden="true" />
 
       <div>

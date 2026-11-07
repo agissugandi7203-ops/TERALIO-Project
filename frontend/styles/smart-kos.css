@@ -2394,10 +2394,14 @@
   .smart-kos-ai-sidebar.is-fixed-crosspage {
     inset: 0.5rem;
     width: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .visit-booking-card {
     grid-template-columns: 1fr;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 140px;
   }
 
   .visit-booking-card__time-col {

@@ -61,6 +61,7 @@ export const DashboardPage = ({
   user = null,
   onLogout,
   onNavigate,
+  initialNav = 'home',
 }) => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
     try {
@@ -71,7 +72,13 @@ export const DashboardPage = ({
   });
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState('home');
+  const [activeNav, setActiveNav] = useState(initialNav);
+
+  useEffect(() => {
+    if (initialNav && initialNav !== activeNav) {
+      setActiveNav(initialNav);
+    }
+  }, [initialNav]);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingChatPrompt, setPendingChatPrompt] = useState('');
   const [openVoiceSignal, setOpenVoiceSignal] = useState(0);
@@ -152,7 +159,7 @@ export const DashboardPage = ({
       .catch(() => {});
 
     smartKosApi
-      .fetchSurveyBookings()
+      .fetchSurveyBookings({ userId: profileUser?.id })
       .then((bookings) => {
         if (isMounted && Array.isArray(bookings)) {
           setSurveyBookings(bookings);
@@ -257,8 +264,14 @@ export const DashboardPage = ({
         setSelectedScheduleDate(action.selectedDate || action.booking?.scheduledIso || null);
         setActiveNav('schedule');
 
+        // Di mobile, tutup modal suara / sidebar AI agar halaman Visit Schedule langsung terlihat & interaktif
+        if (typeof window !== 'undefined' && window.innerWidth <= 780) {
+          setIsGlobalVoiceOpen(false);
+          setIsGlobalAiOpen(false);
+        }
+
         smartKosApi
-          .fetchSurveyBookings()
+          .fetchSurveyBookings({ userId: profileUser?.id })
           .then((bookings) => {
             if (!Array.isArray(bookings)) return;
             setSurveyBookings((prev) => {
@@ -980,6 +993,7 @@ export const DashboardPage = ({
             {/* Notifications View */}
             {activeNav === 'notifications' && (
               <NotificationsView
+                user={profileUser}
                 onNavigate={(nav) => setActiveNav(nav)}
                 onFocusKosOnMap={focusKosOnMap}
               />
