@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import HeroFogScene from '../components/HeroFogScene.jsx';
 import CaseResultsSection from '../components/CaseResultsSection.jsx';
 import PricingSection from '../components/PricingSection.jsx';
@@ -55,6 +57,50 @@ const HARDWARE_BLUEPRINT_SPECS = [
 export function HomePage() {
   const { isNight } = useAtmosphere();
   const { navigate } = useRouter();
+
+  // Smooth scrolling Lenis (diterapkan halus khusus desktop landing page, dinonaktifkan pada HP/mobile)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Deteksi HP / perangkat mobile (layar <= 768px, pointer kasar/touch, atau user-agent mobile)
+    const isMobile =
+      window.innerWidth <= 768 ||
+      (typeof window.matchMedia === 'function' &&
+        window.matchMedia('(max-width: 768px), (pointer: coarse)').matches) ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent || ''
+      );
+
+    // Pada HP, matikan Lenis sepenuhnya agar menggunakan native smooth scrolling bawaan sistem operasi
+    if (isMobile) {
+      return;
+    }
+
+    let lenis;
+    let rafId;
+
+    try {
+      lenis = new Lenis({
+        duration: 1.1,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.95,
+      });
+
+      const raf = (time) => {
+        lenis?.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
+      rafId = requestAnimationFrame(raf);
+    } catch {
+      // Fallback gracefully jika environment tidak mendukung
+    }
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (lenis) lenis.destroy();
+    };
+  }, []);
 
   const handlePrimaryAction = () => {
     navigate('/login');

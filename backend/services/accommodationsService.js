@@ -1,0 +1,716 @@
+import crypto from 'node:crypto';
+import { CAMPUS_HUBS_DATA, CURATED_ACCOMMODATIONS } from '../data/curatedAccommodations.js';
+import { config, isOpenAiConfigured } from '../config/env.js';
+import { getOpenAiClient, hasOpenAiTestOverride } from './openaiClient.js';
+import { osmGeoService } from './osmGeoService.js';
+import { extractVerifiedRecommendations } from './recommendationExtractor.js';
+import { getSupabaseClient, isSupabaseConfigured } from './supabaseService.js';
+
+const sleep = (ms, signal) =>
+  new Promise((resolve) => {
+    if (!ms || ms <= 0 || signal?.aborted) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    }
+  });
+
+export function toSupabaseRow(item) {
+  return {
+    id: item.id,
+    slug: item.slug || item.id,
+    campus_id: item.campusId,
+    campus_name: item.campusName || CAMPUS_HUBS_DATA[item.campusId]?.name || 'Kampus Utama',
+    city: item.city || 'Bandung',
+    area: item.area || '',
+    name: item.name,
+    address: item.address,
+    latitude: Number(item.lat),
+    longitude: Number(item.lng),
+    price_monthly: Number(item.priceMonthly || item.priceValue || 1250000),
+    price_label: item.price || `Rp${Number(item.priceMonthly || 1250000).toLocaleString('id-ID')} / bln`,
+    distance_label: item.distance || '',
+    kos_type: item.type || 'Putra / Putri',
+    match_score: Number(item.matchScore || 95),
+    tag: item.tag || `Match ${item.matchScore || 95}%`,
+    rating: Number(item.rating || 4.8),
+    reviews_count: Number(item.reviewsCount ?? (Array.isArray(item.reviews) ? item.reviews.length : 25)),
+    rooms_available: Number(item.roomsAvailable ?? 2),
+    visiting_hours: item.visitingHours || 'Setiap hari • 08.00 – 21.00 WIB',
+    verified: item.verified !== false,
+    description: item.description || '',
+    owner_name: item.contact?.ownerName || item.ownerName || null,
+    contact_phone: item.contact?.phone || item.contactPhone || null,
+    contact_whatsapp: item.contact?.whatsapp || item.contactWhatsapp || null,
+    features: Array.isArray(item.features) ? item.features : [],
+    nearby_landmarks: Array.isArray(item.nearbyLandmarks) ? item.nearbyLandmarks : [],
+    reviews: Array.isArray(item.reviews) ? item.reviews : [],
+    accent_palette: Array.isArray(item.accentPalette) ? item.accentPalette : ['#1d4ed8', '#38bdf8'],
+  };
+}
+
+export function fromSupabaseRow(row) {
+  if (!row || typeof row !== 'object') return null;
+  const lat = Number(row.latitude ?? row.lat);
+  const lng = Number(row.longitude ?? row.lng);
+  const priceMonthly = Number(row.price_monthly ?? row.priceMonthly ?? row.priceValue ?? 1250000);
+  const reviewsArr = Array.isArray(row.reviews) ? row.reviews : [];
+
+  return {
+    id: String(row.id),
+    slug: row.slug || String(row.id),
+    campusId: row.campus_id || row.campusId || 'telkom',
+    campusName:
+      row.campus_name ||
+      row.campusName ||
+      CAMPUS_HUBS_DATA[row.campus_id || row.campusId || 'telkom']?.name ||
+      'Telkom University Bandung',
+    city: row.city || 'Bandung',
+    area: row.area || '',
+    name: row.name || row.title || 'Hunian Kos TERALIO',
+    address: row.address || '',
+    lat,
+    lng,
+    location: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null,
+    priceMonthly,
+    priceValue: priceMonthly,
+    price: row.price_label || row.price || `Rp${priceMonthly.toLocaleString('id-ID')} / bln`,
+    distance: row.distance_label || row.distance || 'Dekat Kampus',
+    type: row.kos_type || row.type || 'Putra / Putri',
+    matchScore: Number(row.match_score ?? row.matchScore ?? 95),
+    tag: row.tag || `Match ${Number(row.match_score ?? row.matchScore ?? 95)}%`,
+    rating: Number(row.rating ?? 4.8),
+    reviewsCount: Number(row.reviews_count ?? row.reviewsCount ?? (reviewsArr.length || 24)),
+    roomsAvailable: Number(row.rooms_available ?? row.roomsAvailable ?? 2),
+    visitingHours: row.visiting_hours || row.visitingHours || 'Setiap hari • 08.00 – 21.00 WIB',
+    verified: row.verified !== false,
+    description: row.description || '',
+    contact: {
+      ownerName: row.owner_name || row.contact?.ownerName || null,
+      phone: row.contact_phone || row.contact?.phone || null,
+      whatsapp: row.contact_whatsapp || row.contact?.whatsapp || null,
+    },
+    features: Array.isArray(row.features) ? row.features : [],
+    nearbyLandmarks: Array.isArray(row.nearby_landmarks)
+      ? row.nearby_landmarks
+      : Array.isArray(row.nearbyLandmarks)
+        ? row.nearbyLandmarks
+        : [],
+    reviews: reviewsArr,
+    accentPalette: Array.isArray(row.accent_palette)
+      ? row.accent_palette
+      : Array.isArray(row.accentPalette)
+        ? row.accentPalette
+        : ['#1d4ed8', '#38bdf8'],
+  };
+}
+
+const NORMALIZED_SEED_ITEMS = CURATED_ACCOMMODATIONS.map((item) => fromSupabaseRow(toSupabaseRow(item)));
+
+let missingTableBackoffUntil = 0;
+
+/**
+ * Mengekstrak niat pencarian kos berbahasa Indonesia (kampus, area, tipe kos, budget, fasilitas, urutan).
+ */
+export function parseSmartKosIntent(promptText = '', fallbackCampusId = 'telkom') {
+  const raw = String(promptText || '').trim();
+  const lower = raw.toLowerCase();
+
+  let detectedCampusId = null;
+  let detectedCity = null;
+
+  if (/\b(itb|ganesha|cisitu|dago|tamansari|pelesiran|dipatiukur|unpad|sabuga|coblong)\b/i.test(lower)) {
+    detectedCampusId = 'itb';
+    detectedCity = 'Bandung';
+  } else if (/\b(universitas indonesia|\bui\b|depok|kukusan|kutek|pondok cina|pocin|margonda|bikun|fasilkom)\b/i.test(lower)) {
+    detectedCampusId = 'ui';
+    detectedCity = 'Depok';
+  } else if (/\b(ugm|gadjah mada|jogja|yogyakarta|sleman|pogung|sendowo|sardjito|fkkmk|bulaksumur|kaliurang)\b/i.test(lower)) {
+    detectedCampusId = 'ugm';
+    detectedCity = 'Yogyakarta';
+  } else if (/\b(telkom|sukapura|sukabirus|bojongsoang|cikoneng|dayeuhkolot|buah\s*batu|umayah|\bpga\b)\b/i.test(lower)) {
+    detectedCampusId = 'telkom';
+    detectedCity = 'Bandung';
+  } else if (/\bbandung\b/i.test(lower)) {
+    detectedCity = 'Bandung';
+  }
+
+  let kosType = null;
+  if (/\b(putri|cewek|mahasiswi|perempuan|wanita)\b/i.test(lower) && !/\bputra\s*\/?\s*putri\b/i.test(lower)) {
+    kosType = 'putri';
+  } else if (/\b(putra|cowok|mahasiswa pria|laki)\b/i.test(lower) && !/\bputra\s*\/?\s*putri\b/i.test(lower)) {
+    kosType = 'putra';
+  } else if (/\bcampur\b/i.test(lower)) {
+    kosType = 'campur';
+  }
+
+  // Ekstraksi batas anggaran (contoh: "1.3 juta", "1,25jt", "1300rb", "1.200.000", "murah")
+  let maxPrice = null;
+  const jutaMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*(?:juta|jt)\b/i);
+  const ribuMatch = lower.match(/(\d{3,4})\s*(?:ribu|rb)\b/i);
+  const fullRupiahMatch = lower.match(/rp\.?\s*(1[.,]\d{3}[.,]\d{3})/i);
+
+  if (jutaMatch) {
+    const num = Number.parseFloat(jutaMatch[1].replace(',', '.'));
+    if (Number.isFinite(num) && num > 0 && num < 20) {
+      maxPrice = Math.round(num * 1_000_000);
+    }
+  } else if (ribuMatch) {
+    const num = Number.parseInt(ribuMatch[1], 10);
+    if (Number.isFinite(num) && num >= 500) {
+      maxPrice = num * 1000;
+    }
+  } else if (fullRupiahMatch) {
+    const digits = Number.parseInt(fullRupiahMatch[1].replace(/[.,]/g, ''), 10);
+    if (Number.isFinite(digits)) maxPrice = digits;
+  } else if (/\b(murah|hemat|terjangkau|ekonomis|budget)\b/i.test(lower)) {
+    maxPrice = 1_300_000;
+  }
+
+  const keywordSignals = [];
+  const KEYWORD_CATALOG = [
+    { pattern: /\bac\b|ber-ac|pendingin/i, term: 'ac' },
+    { pattern: /water\s*heater|air\s*hangat|air\s*panas/i, term: 'water heater' },
+    { pattern: /kamar\s*mandi\s*dalam|\bkmd\b/i, term: 'kamar mandi dalam' },
+    { pattern: /wi-?fi|internet|fiber/i, term: 'wi-fi' },
+    { pattern: /laundry|cuci/i, term: 'laundry' },
+    { pattern: /listrik/i, term: 'listrik' },
+    { pattern: /smart\s*(?:door\s*)?lock|kartu\s*akses|fingerprint/i, term: 'smart' },
+    { pattern: /balkon|rooftop|loft/i, term: 'balkon' },
+    { pattern: /stasiun|krl|commuter/i, term: 'stasiun' },
+    { pattern: /tenang|quiet|hening|fokus|skripsi|koas/i, term: 'tenang' },
+    { pattern: /\bpga\b/i, term: 'pga' },
+    { pattern: /sukapura/i, term: 'sukapura' },
+    { pattern: /sukabirus|umayah/i, term: 'sukabirus' },
+    { pattern: /bojongsoang|cikoneng/i, term: 'bojongsoang' },
+    { pattern: /cisitu|dago/i, term: 'cisitu' },
+    { pattern: /tamansari|pelesiran|ciwalk/i, term: 'tamansari' },
+    { pattern: /dipatiukur|\bdu\b|unpad/i, term: 'dipatiukur' },
+    { pattern: /kukusan|kutek/i, term: 'kukusan' },
+    { pattern: /pondok\s*cina|pocin|margonda/i, term: 'pondok cina' },
+    { pattern: /pogung/i, term: 'pogung' },
+    { pattern: /sendowo|sardjito|fkkmk/i, term: 'sendowo' },
+  ];
+
+  for (const entry of KEYWORD_CATALOG) {
+    if (entry.pattern.test(lower)) {
+      keywordSignals.push(entry.term);
+    }
+  }
+
+  let sortBy = 'relevance';
+  if (/\b(terdekat|paling\s*dekat|jalan\s*kaki|selangkah)\b/i.test(lower)) {
+    sortBy = 'nearest';
+  } else if (/\b(termurah|paling\s*murah|hemat)\b/i.test(lower)) {
+    sortBy = 'cheapest';
+  }
+
+  return {
+    rawPrompt: raw,
+    campusId: detectedCampusId || (detectedCity ? null : fallbackCampusId || 'telkom'),
+    explicitCampusDetected: Boolean(detectedCampusId),
+    city: detectedCity,
+    kosType,
+    maxPrice,
+    keywordSignals,
+    sortBy,
+  };
+}
+
+function parseMetersFromDistanceLabel(distanceStr) {
+  const str = String(distanceStr || '').toLowerCase();
+  const kmMatch = str.match(/(\d+(?:[.,]\d+)?)\s*km/);
+  if (kmMatch) {
+    return Math.round(Number.parseFloat(kmMatch[1].replace(',', '.')) * 1000);
+  }
+  const mMatch = str.match(/(\d+)\s*m\b/);
+  if (mMatch) {
+    return Number.parseInt(mMatch[1], 10);
+  }
+  return 750;
+}
+
+export const accommodationsService = {
+  /**
+   * Mengambil seluruh data kos dari tabel `public.accommodations` di Supabase,
+   * atau sinkron mulus ke dataset terpetakan apabila tabel belum dibuat di SQL Editor.
+   */
+  async loadCatalog({ forceSupabaseCheck = false } = {}) {
+    const supaConfigured = isSupabaseConfigured();
+
+    if (supaConfigured && (forceSupabaseCheck || Date.now() >= missingTableBackoffUntil)) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('accommodations')
+          .select('*')
+          .order('match_score', { ascending: false });
+
+        if (error) {
+          if (error.code === 'PGRST205' || /accommodations/i.test(error.message || '')) {
+            missingTableBackoffUntil = Date.now() + 12_000;
+          }
+          throw error;
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+          return {
+            source: 'supabase',
+            supabaseConfigured: true,
+            tableReady: true,
+            campusHubs: CAMPUS_HUBS_DATA,
+            items: data.map(fromSupabaseRow).filter(Boolean),
+          };
+        }
+      } catch {
+        // Lanjut ke dataset terpetakan agar demo selalu 100% jalan tanpa error
+      }
+    }
+
+    return {
+      source: 'supabase-mapped-seed',
+      supabaseConfigured: supaConfigured,
+      tableReady: false,
+      campusHubs: CAMPUS_HUBS_DATA,
+      items: NORMALIZED_SEED_ITEMS,
+    };
+  },
+
+  async getById(idOrSlug) {
+    const needle = String(idOrSlug || '').trim().toLowerCase();
+    if (!needle) return null;
+
+    const catalog = await this.loadCatalog();
+    return (
+      catalog.items.find(
+        (item) =>
+          item.id.toLowerCase() === needle ||
+          String(item.slug || '').toLowerCase() === needle ||
+          item.name.toLowerCase() === needle,
+      ) || null
+    );
+  },
+
+  /**
+   * Pencarian terstruktur & berbasis relevansi untuk REST API, Tool Orchestrator, maupun Smart Kos AI.
+   */
+  async search({ campusId, city, type, maxPrice, query, limit = 12 } = {}) {
+    const catalog = await this.loadCatalog();
+    const intent = query ? parseSmartKosIntent(query, campusId || 'telkom') : null;
+
+    const effectiveCampusId =
+      intent?.explicitCampusDetected
+        ? intent.campusId
+        : campusId || intent?.campusId || null;
+    const effectiveCity = city || intent?.city || null;
+    const effectiveType = type || intent?.kosType || null;
+    const effectiveMaxPrice =
+      typeof maxPrice === 'number' && maxPrice > 0 ? maxPrice : intent?.maxPrice || null;
+
+    // 1. Filter kandidat utama berdasarkan kampus/kota
+    let pool = [...catalog.items];
+    if (effectiveCampusId && CAMPUS_HUBS_DATA[effectiveCampusId]) {
+      const campusMatches = pool.filter((item) => item.campusId === effectiveCampusId);
+      if (campusMatches.length > 0) pool = campusMatches;
+    } else if (effectiveCity) {
+      const cityLower = effectiveCity.toLowerCase();
+      const cityMatches = pool.filter((item) => item.city.toLowerCase() === cityLower);
+      if (cityMatches.length > 0) pool = cityMatches;
+    }
+
+    // 2. Hitung skor kecocokan cerdas per kandidat
+    const queryLower = String(query || '').trim().toLowerCase();
+    const scored = pool.map((item) => {
+      let score = item.matchScore || 90;
+      const haystack = [
+        item.name,
+        item.area,
+        item.address,
+        item.city,
+        item.campusName,
+        item.type,
+        item.description,
+        ...(item.features || []),
+        ...(item.nearbyLandmarks || []).map((l) => l.name),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      // Nama kos disebut eksplisit
+      if (queryLower && queryLower.length >= 4 && queryLower.includes(item.name.toLowerCase())) {
+        score += 60;
+      } else if (queryLower && item.name.toLowerCase().includes(queryLower) && queryLower.length >= 4) {
+        score += 45;
+      }
+
+      // Kecocokan tipe kos (Putri / Putra / Campur)
+      const itemTypeLower = item.type.toLowerCase();
+      if (effectiveType === 'putri') {
+        if (itemTypeLower === 'putri') score += 28;
+        else if (itemTypeLower.includes('putri')) score += 10;
+        else score -= 35;
+      } else if (effectiveType === 'putra') {
+        if (itemTypeLower === 'putra') score += 28;
+        else if (itemTypeLower.includes('putra')) score += 10;
+        else score -= 35;
+      } else if (effectiveType === 'campur') {
+        if (itemTypeLower.includes('campur') || itemTypeLower.includes('putra / putri')) score += 20;
+      }
+
+      // Kecocokan anggaran
+      if (effectiveMaxPrice) {
+        if (item.priceMonthly <= effectiveMaxPrice) {
+          score += 22;
+        } else {
+          const diffRatio = (item.priceMonthly - effectiveMaxPrice) / effectiveMaxPrice;
+          score -= Math.min(40, Math.round(diffRatio * 80));
+        }
+      }
+
+      // Kecocokan sinyal fasilitas & area mikro
+      if (intent?.keywordSignals?.length) {
+        for (const sig of intent.keywordSignals) {
+          if (haystack.includes(sig)) {
+            score += 18;
+          }
+        }
+      }
+
+      const approxMeters = parseMetersFromDistanceLabel(item.distance);
+      if (intent?.sortBy === 'nearest') {
+        score += Math.max(0, Math.round((1200 - approxMeters) / 25));
+      } else if (intent?.sortBy === 'cheapest') {
+        score += Math.max(0, Math.round((1_700_000 - item.priceMonthly) / 20_000));
+      }
+
+      return { item, score, approxMeters };
+    });
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.approxMeters - b.approxMeters;
+    });
+
+    // Filter ketat bila ada preferensi tipe eksklusif yang memang punya kandidat valid
+    let filteredScored = scored;
+    if (effectiveType === 'putri') {
+      const strictPutri = scored.filter(({ item }) => item.type.toLowerCase().includes('putri'));
+      if (strictPutri.length > 0) filteredScored = strictPutri;
+    } else if (effectiveType === 'putra') {
+      const strictPutra = scored.filter(({ item }) => item.type.toLowerCase().includes('putra'));
+      if (strictPutra.length > 0) filteredScored = strictPutra;
+    }
+
+    if (effectiveMaxPrice) {
+      const withinBudget = filteredScored.filter(({ item }) => item.priceMonthly <= effectiveMaxPrice);
+      if (withinBudget.length > 0) filteredScored = withinBudget;
+    }
+
+    const matchedItems = filteredScored.slice(0, Math.max(1, limit)).map((entry) => entry.item);
+    const primaryMatch = matchedItems[0] || pool[0] || catalog.items[0] || null;
+    const resolvedCampusId = primaryMatch?.campusId || effectiveCampusId || 'telkom';
+
+    return {
+      source: catalog.source,
+      supabaseConfigured: catalog.supabaseConfigured,
+      tableReady: catalog.tableReady,
+      campusId: resolvedCampusId,
+      campus: CAMPUS_HUBS_DATA[resolvedCampusId] || CAMPUS_HUBS_DATA.telkom,
+      intent,
+      totalMatched: filteredScored.length,
+      items: matchedItems,
+      primaryMatch,
+    };
+  },
+
+  /**
+   * Menyusun teks penjelasan grounded (anti-halusinasi) langsung dari baris data Supabase yang cocok,
+   * lengkap dengan ringkasan suara singkat (`voiceSummary`) untuk dibacakan oleh AI Voice.
+   */
+  buildGroundedReply({ prompt, searchResult, route }) {
+    const primary = searchResult.primaryMatch;
+    const campus = searchResult.campus;
+    const alternatives = searchResult.items.slice(1, 3);
+
+    if (!primary) {
+      return {
+        markdown:
+          'Maaf, saat ini belum ditemukan data kos yang cocok di database TERALIO untuk kriteria tersebut. Silakan coba kata kunci area kampus lain seperti Telkom University, ITB Bandung, UI Depok, atau UGM Yogyakarta.',
+        voiceSummary:
+          'Maaf, belum ada kos yang cocok dengan kriteria tersebut di database kami.',
+      };
+    }
+
+    const distInfo = route?.distanceText
+      ? `${route.distanceText} (~${route.walkMinutes} menit jalan kaki / ${route.rideMinutes} menit naik motor ke ${campus.shortName})`
+      : primary.distance;
+
+    const topFeatures = (primary.features || []).slice(0, 4).join(', ');
+    const contactLine = primary.contact?.phone
+      ? `${primary.contact.ownerName ? `${primary.contact.ownerName} • ` : ''}${primary.contact.phone}`
+      : 'Tersedia pada panel Overview Kos';
+
+    const lines = [
+      `Berdasarkan pencarian Anda di database TERALIO sekitar **${campus.name}**, saya telah mengarahkan peta langsung ke rekomendasi terbaik:`,
+      '',
+      `### 1. ${primary.name} (${primary.tag || `Match ${primary.matchScore}%`})`,
+      `- **Harga & Tipe:** ${primary.price} • Kos ${primary.type} (Sisa ${primary.roomsAvailable} kamar)`,
+      `- **Lokasi & Jarak:** ${primary.address} — **${distInfo}**`,
+      `- **Fasilitas Utama:** ${topFeatures}`,
+      `- **Kontak Pengelola:** ${contactLine}`,
+    ];
+
+    if (alternatives.length > 0) {
+      lines.push('', '**Opsi terdekat lainnya di peta:**');
+      alternatives.forEach((alt, idx) => {
+        lines.push(
+          `${idx + 2}. **${alt.name}** — ${alt.price} (${alt.type}, ${alt.distance})`,
+        );
+      });
+    }
+
+    lines.push(
+      '',
+      'Panel **Overview Lokasi** di sebelah kiri peta sudah saya bukakan otomatis agar Anda bisa langsung melihat detail fasilitas, ulasan penghuni, rute kampus, dan jadwal survei.',
+    );
+
+    const voiceSummary = `Saya menemukan ${primary.name} di ${primary.area || campus.city}, dengan tarif ${primary.price}, berjarak ${route?.distanceText || primary.distance} atau sekitar ${route?.walkMinutes || 7} menit jalan kaki dari ${campus.shortName}. Peta dan overview kos sudah saya arahkan langsung ke lokasi tersebut.`;
+
+    return {
+      markdown: lines.join('\n'),
+      voiceSummary,
+    };
+  },
+
+  /**
+   * Streaming SSE interaktif untuk Smart Kos Match (baik melalui Prompt Teks maupun Suara / Voice Orb).
+   * Mengirimkan indikator status Thinking Orbs bertahap -> event `redirect_location` -> `recommendations` -> `text_delta` -> `done`.
+   */
+  async streamSmartKosSearch(
+    {
+      message,
+      campusId = 'telkom',
+      reasoningEffort = 'none',
+      stepDelayMs,
+    } = {},
+    { onEvent, signal } = {},
+  ) {
+    const emit = typeof onEvent === 'function' ? onEvent : () => {};
+    const isTestEnv = Boolean(process.env.VITEST) || process.env.NODE_ENV === 'test';
+    const paceMs = typeof stepDelayMs === 'number' ? stepDelayMs : isTestEnv ? 0 : 280;
+
+    // Step 1: Reasoning / Analisis Kriteria
+    emit('status', {
+      orbState: 'reasoning',
+      variant: reasoningEffort && reasoningEffort !== 'none' ? 'twins' : 'default',
+      step: 'intent',
+      label: 'Menganalisis kriteria lokasi, tipe kos, & budget Anda...',
+    });
+    await sleep(paceMs, signal);
+
+    // Step 2: Pencarian Database Supabase
+    emit('status', {
+      orbState: 'searching',
+      variant: 'lighthouse',
+      step: 'database',
+      label: 'Mencari kos terdekat berdasarkan database Supabase...',
+    });
+    const searchResult = await this.search({
+      query: message,
+      campusId,
+      limit: 6,
+    });
+    await sleep(paceMs, signal);
+
+    // Step 3: Perhitungan Rute & Jarak Geospasial Kampus
+    emit('status', {
+      orbState: 'working',
+      variant: 'gyro',
+      step: 'routing',
+      label: `Menghitung jarak & rute jalan kaki ke ${searchResult.campus.shortName}...`,
+    });
+
+    const primary = searchResult.primaryMatch;
+    const route = primary
+      ? await osmGeoService.computeCampusRoute(searchResult.campus, primary, { mode: 'foot' })
+      : null;
+    await sleep(Math.round(paceMs * 0.75), signal);
+
+    // Step 4: Emit `redirect_location` -> UI langsung flyTo ke koordinat kos & membuka In-Platform Overview!
+    if (primary) {
+      emit('status', {
+        orbState: 'using',
+        variant: 'zoom',
+        step: 'redirect',
+        label: `Mengarahkan peta ke ${primary.name}...`,
+      });
+
+      emit('redirect_location', {
+        campusId: searchResult.campusId,
+        campus: searchResult.campus,
+        targetKos: primary,
+        matchedAccommodations: searchResult.items,
+        route,
+        dataSource: searchResult.source,
+      });
+    }
+
+    // Step 5: Emit `recommendations` terverifikasi (konsisten dengan kontrak halaman Chat)
+    const verifiedRecommendations = extractVerifiedRecommendations([
+      {
+        name: 'teralio_search_accommodations',
+        args: { query: message },
+        ok: true,
+        data: { accommodations: searchResult.items },
+      },
+      ...(primary && route
+        ? [
+            {
+              name: 'maps_compute_route',
+              args: {
+                origin: searchResult.campus.name,
+                destination: primary.name,
+                travelMode: 'WALK',
+              },
+              ok: true,
+              data: {
+                travelMode: 'WALK',
+                routes: [
+                  {
+                    distanceMeters: route.distanceMeters,
+                    distanceText: route.distanceText,
+                    durationText: `${route.walkMinutes} mnt jalan kaki`,
+                  },
+                ],
+              },
+            },
+          ]
+        : []),
+    ]);
+
+    emit('recommendations', verifiedRecommendations);
+
+    // Step 6: Susun respons penjelasan (OpenAI `gpt-6-astra` jika aktif, atau grounded database streamer)
+    const grounded = this.buildGroundedReply({
+      prompt: message,
+      searchResult,
+      route,
+    });
+
+    let finalText = grounded.markdown;
+
+    if ((isOpenAiConfigured() || hasOpenAiTestOverride()) && primary) {
+      try {
+        emit('status', {
+          orbState: 'working',
+          variant: 'default',
+          step: 'answering',
+          label: 'Menyusun rekomendasi AI TERALIO...',
+        });
+
+        const client = getOpenAiClient();
+        const contextPayload = searchResult.items.slice(0, 3).map((k) => ({
+          name: k.name,
+          type: k.type,
+          price: k.price,
+          address: k.address,
+          distance: k.distance,
+          rating: k.rating,
+          roomsAvailable: k.roomsAvailable,
+          features: k.features,
+          contact: k.contact,
+        }));
+
+        const aiResp = await client.responses.create({
+          model: config.openai.responsesModel,
+          instructions:
+            'Kamu adalah asisten Smart Kos TERALIO berbahasa Indonesia yang ringkas, hangat, dan akurat. Gunakan HANYA fakta dari JSON database kos yang diberikan tanpa mengarang alamat, harga, atau nomor telepon. Sebutkan bahwa peta dan panel Overview Lokasi di sebelah kiri telah diarahkan otomatis ke kos terbaik.',
+          input: `Pertanyaan pengguna: "${message}"\nKampus acuan: ${searchResult.campus.name}\nRute kos utama: ${route?.distanceText || primary.distance} (${route?.walkMinutes || 7} menit jalan kaki).\nData kos terverifikasi Supabase:\n${JSON.stringify(contextPayload, null, 2)}`,
+          max_output_tokens: 650,
+        });
+
+        if (aiResp?.output_text && aiResp.output_text.trim().length > 20) {
+          finalText = aiResp.output_text.trim();
+        }
+      } catch {
+        // Gunakan teks grounded database bila pemanggilan model eksternal terkendala
+      }
+    }
+
+    // Streamkan per segmen agar animasi teks di Right Conversation Sidebar mengalir halus
+    const tokens = finalText.match(/.{1,36}(\s|$)/gs) || [finalText];
+    for (const chunk of tokens) {
+      if (signal?.aborted) break;
+      emit('text_delta', { delta: chunk });
+      if (paceMs > 0) {
+        await sleep(16, signal);
+      }
+    }
+
+    const responseId = `smartkos_${crypto.randomUUID().slice(0, 12)}`;
+    emit('done', {
+      responseId,
+      outputText: finalText,
+      voiceSummary: grounded.voiceSummary,
+      campusId: searchResult.campusId,
+      campus: searchResult.campus,
+      targetKos: primary,
+      route,
+      matchedAccommodations: searchResult.items,
+      recommendations: verifiedRecommendations,
+      dataSource: searchResult.source,
+    });
+  },
+
+  /**
+   * Mengisi / memperbarui (upsert) seluruh 12 kos terkurasi ke tabel `public.accommodations` di Supabase.
+   */
+  async seedToSupabase() {
+    if (!isSupabaseConfigured()) {
+      const err = new Error(
+        'SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY belum terkonfigurasi di backend/.env.',
+      );
+      err.status = 503;
+      err.code = 'SUPABASE_NOT_CONFIGURED';
+      throw err;
+    }
+
+    const supabase = getSupabaseClient();
+    const rows = CURATED_ACCOMMODATIONS.map(toSupabaseRow);
+
+    const { data, error } = await supabase
+      .from('accommodations')
+      .upsert(rows, { onConflict: 'id' })
+      .select();
+
+    if (error) {
+      if (error.code === 'PGRST205') {
+        const ddlError = new Error(
+          'Tabel public.accommodations belum dibuat di Supabase Anda. Silakan jalankan file supabase/migrations/001_smart_kos_accommodations.sql terlebih dahulu di Supabase SQL Editor, lalu jalankan kembali seed ini.',
+        );
+        ddlError.status = 428;
+        ddlError.code = 'SUPABASE_TABLE_MISSING';
+        throw ddlError;
+      }
+      throw error;
+    }
+
+    missingTableBackoffUntil = 0;
+    return {
+      insertedOrUpdated: Array.isArray(data) ? data.length : rows.length,
+      items: (data || rows).map(fromSupabaseRow),
+    };
+  },
+};
+
+export default accommodationsService;

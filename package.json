@@ -17,7 +17,8 @@
     "test:frontend": "npm test --prefix frontend",
     "test:backend": "npm test --prefix backend",
     "test": "npm run test:backend && npm run test:frontend",
-    "build:frontend": "npm run build --prefix frontend"
+    "build:frontend": "npm run build --prefix frontend",
+    "seed:supabase": "node backend/scripts/seedSupabase.js"
   },
   "keywords": [
     "teralio",

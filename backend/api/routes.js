@@ -1,4 +1,5 @@
 import express, { Router } from 'express';
+import { accommodationsController } from './accommodationsController.js';
 import { authController } from './authController.js';
 import { itemsController } from './itemsController.js';
 import {
@@ -82,6 +83,18 @@ router.post('/auth/logout', noStore, authController.logout);
 router.get('/items', itemsController.getItems);
 router.get('/items/:id', itemsController.getItemById);
 router.post('/items', itemsController.createItem);
+
+// Smart Kos Match — Supabase Accommodations, Geospatial Route, & AI Search Stream
+router.get('/accommodations', accommodationsController.listAccommodations);
+router.get('/accommodations/:id', accommodationsController.getAccommodationById);
+router.post('/accommodations/route', aiRateLimiter, accommodationsController.computeRoute);
+router.post(
+  '/accommodations/ai-search/stream',
+  noStore,
+  aiRateLimiter,
+  accommodationsController.streamAiSearch,
+);
+router.post('/accommodations/seed', noStore, aiRateLimiter, aiAuthGuard, accommodationsController.seedSupabase);
 
 // OpenAI Responses API, SSE Streaming, File Upload, & Web Search endpoints
 router.get('/openai/status', openaiController.getStatus);

@@ -4,6 +4,7 @@ import { AppError, badRequest, notFound, timeoutError } from '../utils/errors.js
 import { withTimeout } from '../utils/http.js';
 import { createLogger } from '../utils/logger.js';
 import { googleMapsService } from './googleMapsService.js';
+import { accommodationsService } from './accommodationsService.js';
 import { itemsService } from './itemsService.js';
 import { mcpClientService } from './mcpClientService.js';
 import { buildWebSearchToolConfig, webSearchService } from './webSearchService.js';
@@ -59,24 +60,43 @@ const LOCAL_TOOLS = [
       const result = await itemsService.getAll();
       let items = Array.isArray(result.items) ? result.items : [];
 
-      if (category) {
-        const needle = category.toLowerCase();
-        items = items.filter((item) => String(item.category || '').toLowerCase().includes(needle));
-      }
-      if (query) {
-        const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-        items = items.filter((item) => {
-          const haystack = `${item.title || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
-          return terms.every((t) => haystack.includes(t));
-        });
+      const hasCustomAccommodationItems = items.some((item) => {
+        const cat = String(item.category || '').toLowerCase();
+        return cat && !['frontend', 'backend', 'database', 'general'].includes(cat);
+      });
+
+      if (hasCustomAccommodationItems) {
+        if (category) {
+          const needle = category.toLowerCase();
+          items = items.filter((item) => String(item.category || '').toLowerCase().includes(needle));
+        }
+        if (query) {
+          const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+          items = items.filter((item) => {
+            const haystack = `${item.title || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
+            return terms.every((t) => haystack.includes(t));
+          });
+        }
+
+        const sliced = items.slice(0, limit);
+        return {
+          source: result.source,
+          totalMatched: items.length,
+          returnedCount: sliced.length,
+          accommodations: sliced,
+        };
       }
 
-      const sliced = items.slice(0, limit);
+      const supaSearch = await accommodationsService.search({
+        query,
+        type: category,
+        limit,
+      });
       return {
-        source: result.source,
-        totalMatched: items.length,
-        returnedCount: sliced.length,
-        accommodations: sliced,
+        source: supaSearch.source,
+        totalMatched: supaSearch.totalMatched,
+        returnedCount: supaSearch.items.length,
+        accommodations: supaSearch.items,
       };
     },
   },
@@ -92,7 +112,7 @@ const LOCAL_TOOLS = [
       id: z.string().min(1).max(100).describe('ID unik hunian/item di TERALIO'),
     }),
     async handler({ id }) {
-      const item = await itemsService.getById(id);
+      const item = (await itemsService.getById(id)) || (await accommodationsService.getById(id));
       if (!item) throw notFound(`Hunian dengan ID '${id}' tidak ditemukan`);
       return { accommodation: item };
     },

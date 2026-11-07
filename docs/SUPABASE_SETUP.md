@@ -93,3 +93,16 @@ ALTER TABLE public.items
   ADD COLUMN IF NOT EXISTS features TEXT[] DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS google_maps_uri TEXT;
 ```
+
+---
+
+## 6. Tabel Utama Smart Kos Match (`public.accommodations`) & Auto-Seeder
+Untuk mengaktifkan penyimpanan tabel penuh **Smart Kos Match** beserta 12 data kos terkurasi di 4 koridor kampus utama (Telkom University, ITB Bandung, UI Depok, UGM Yogyakarta):
+
+1. Buka **Supabase Dashboard -> SQL Editor -> New Query**.
+2. Salin seluruh isi file `supabase/migrations/001_smart_kos_accommodations.sql` lalu klik **Run**.
+3. Dari terminal root project, jalankan perintah satu baris berikut:
+   ```bash
+   npm run seed:supabase
+   ```
+4. Seluruh endpoint `/api/accommodations`, `/api/accommodations/ai-search/stream`, serta tools AI `teralio_search_accommodations` akan otomatis membaca langsung dari tabel `public.accommodations` di Supabase Anda (`source: "supabase"`).
